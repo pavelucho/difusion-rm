@@ -4,6 +4,29 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
 
 ## [No publicado]
 
+### Corregido — fase 2
+- **La b baja y la b alta salían iguales en series de dos valores b.** La regla de
+  preferir una referencia >= 150 s/mm² elegía el único valor alto disponible, y el
+  cálculo se detenía con «valores b idénticos». Ahora la referencia se busca solo
+  entre los valores por debajo de la b alta. Detectado ejecutando la aplicación
+  sobre un estudio real de dos valores b, el caso clínico habitual.
+- **El ADC del equipo nunca llegaba a la interfaz.** `groupAndAverageSlices` lo
+  descartaba y el worker lo buscaba después en ese mismo resultado. Ahora la
+  función devuelve las series de difusión y los mapas del equipo por separado.
+- **El meta-encabezado del DICOM exportado describía el archivo original.**
+  Conservaba su SOP Instance UID y, en estudios comprimidos, su transfer syntax,
+  de modo que el receptor intentaría descomprimir píxeles ya en claro. Ahora se
+  reescriben los tres tags del meta.
+- El emparejamiento de cortes exigía correspondencia en todos los valores b aunque
+  el modo de dos puntos solo use dos; ahora depende del modo de cálculo.
+- El mensaje «Identical b-values» aparecía en inglés desde el núcleo de cálculo.
+
+### Añadido — fase 2
+- Los avisos del worker (archivos ilegibles, valores b deducidos de texto) se
+  muestran en la interfaz; antes se enviaban y nadie los pintaba.
+- Prueba de ida y vuelta: se exporta un mapa ADC y se vuelve a leer con el propio
+  lector, comprobando transfer syntax, UID de serie y el escalado ADC · 1e6.
+
 ### Añadido
 - Lectura de DICOM comprimido en JPEG sin pérdida (1.2.840.10008.1.2.4.57 y .4.70),
   incluida la reconstrucción de la Basic Offset Table cuando el equipo la deja vacía.

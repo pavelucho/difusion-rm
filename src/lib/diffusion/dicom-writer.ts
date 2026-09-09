@@ -84,6 +84,15 @@ export async function createDerivedDicom(
   // Common overrides
   dataset['00080016'] = { vr: 'UI', Value: [dataset['00080016']?.Value?.[0] || '1.2.840.10008.5.1.4.1.1.4'] }; // SOP Class UID
   dataset['00080018'] = { vr: 'UI', Value: [sopInstanceUID] };
+
+  // El meta-encabezado tiene que describir el archivo que se está escribiendo, no
+  // el original: si conserva el SOP Instance UID de origen, algunos PACS rechazan
+  // el envío o deduplican mal; y si conserva la transfer syntax comprimida del
+  // original, el receptor intenta descomprimir píxeles que ya están en claro.
+  const meta = dicomDict.meta as Record<string, { vr: string; Value: unknown[] }>;
+  meta['00020002'] = { vr: 'UI', Value: [dataset['00080016'].Value[0]] };
+  meta['00020003'] = { vr: 'UI', Value: [sopInstanceUID] };
+  meta['00020010'] = { vr: 'UI', Value: ['1.2.840.10008.1.2.1'] }; // Explicit VR Little Endian
   dataset['0020000E'] = { vr: 'UI', Value: [seriesInstanceUID] };
   dataset['00080060'] = { vr: 'CS', Value: ["MR"] };
   dataset['00080008'] = { vr: 'CS', Value: ["DERIVED", "SECONDARY", mapType] };

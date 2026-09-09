@@ -5,3 +5,6 @@ coverage/
 *.log
 .env*
 !.env.example
+
+# Carpeta de pruebas locales: nunca versionar estudios de pacientes
+public/

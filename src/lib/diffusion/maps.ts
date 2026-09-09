@@ -1,4 +1,5 @@
 import type { AveragedSlice, MapResult } from './types';
+import { es } from '../../i18n/es';
 
 export function estimateNoiseThreshold(lowBSlice: AveragedSlice, multiplier: number = 3): { threshold: number, mean: number, sd: number } {
   const { columns, rows } = lowBSlice.metadata;
@@ -65,7 +66,7 @@ export function computeTwoPointMaps(
 
   const db = b2 - b1;
   if (db === 0) {
-    throw new Error('Identical b-values');
+    throw new Error(es.errSameB);
   }
 
   for (let i = 0; i < numPixels; i++) {

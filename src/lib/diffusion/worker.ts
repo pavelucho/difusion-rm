@@ -10,6 +10,8 @@ import { es } from '../../i18n/es';
 
 // We store state in the worker to handle recomputations and exports
 let state: {
+  /** Grupos de difusión; el emparejamiento se rehace según el modo de cálculo. */
+  diffusionGroups: Map<string, AveragedSlice>;
   matched: MatchedSlice[];
   bValues: number[];
   vendorAdcMaps: AveragedSlice[];
@@ -67,21 +69,26 @@ self.onmessage = async (e: MessageEvent) => {
 
       self.postMessage({ type: 'PROGRESS', payload: { step: es.pasoAgrupacion, progress: 1.0 } });
       
-      const groups = groupAndAverageSlices(slices);
-      
-      const vendorAdcGroups = Array.from(groups.values()).filter(g => g.metadata.isVendorADC);
-      const vendorAdcMaps = vendorAdcGroups.sort((a, b) => a.metadata.canonicalPosition - b.metadata.canonicalPosition);
-      
-      const bValues = Array.from(new Set(
-        Array.from(groups.values())
-        .filter(g => !g.metadata.isVendorADC)
-        .map(g => g.metadata.bValue)
-      )).sort((a, b) => a - b);
-      
-      let bLow = bValues.find(b => b >= 150) ?? bValues[0];
-      let bHigh = bValues[bValues.length - 1];
-      
-      const { matched, discardedCount, errors } = matchSlices(groups, bValues);
+      const { diffusion, vendorAdc } = groupAndAverageSlices(slices);
+
+      const vendorAdcMaps = Array.from(vendorAdc.values())
+        .sort((a, b) => a.metadata.canonicalPosition - b.metadata.canonicalPosition);
+
+      const bValues = Array.from(
+        new Set(Array.from(diffusion.values()).map(g => g.metadata.bValue))
+      ).sort((a, b) => a - b);
+
+      // Se prefiere una b de referencia >= 150 s/mm² para anular el sesgo por
+      // microperfusión, pero solo entre las que no son la b más alta: con una serie
+      // de dos valores b —el caso habitual— elegirla sin ese filtro dejaba b baja y
+      // b alta en el mismo valor y el cálculo se detenía con «valores b idénticos».
+      const bHigh = bValues[bValues.length - 1];
+      const candidatasBajas = bValues.filter(b => b < bHigh);
+      const bLow = candidatasBajas.find(b => b >= 150) ?? candidatasBajas[0] ?? bValues[0];
+
+      // Se empareja con los dos valores b del modo inicial. Exigir correspondencia
+      // en todos los b descartaría cortes que el cálculo de dos puntos sí usa.
+      const { matched, discardedCount, errors } = matchSlices(diffusion, [bLow, bHigh]);
 
       // Avisos sobre la procedencia de los valores b: un ADC calculado sobre una b
       // deducida del nombre de la secuencia no merece la misma confianza que uno
@@ -104,6 +111,7 @@ self.onmessage = async (e: MessageEvent) => {
       }
       
       state = {
+        diffusionGroups: diffusion,
         matched,
         bValues,
         vendorAdcMaps,
@@ -141,6 +149,12 @@ self.onmessage = async (e: MessageEvent) => {
       state.threshold = threshold;
       state.useMultiB = useMultiB;
       state.registrationMode = registrationMode || 'translation';
+
+      // El emparejamiento depende del modo: el ajuste de dos puntos solo necesita
+      // las dos series elegidas, el multi-b las necesita todas.
+      const bParaEmparejar = useMultiB ? state.bValues : [bLow, bHigh];
+      const emparejado = matchSlices(state.diffusionGroups, bParaEmparejar);
+      state.matched = emparejado.matched;
       
       const results: { sliceIndex: number; maps: MapResult; registeredSlices: Record<number, Float32Array>; transforms: Record<number, any> }[] = [];
       const totalSlices = state.matched.length;
@@ -211,7 +225,16 @@ self.onmessage = async (e: MessageEvent) => {
       
       self.postMessage({
         type: 'COMPUTED',
-        payload: { results, vendorAdcData, dicomWindows, bLow, bHigh, threshold }
+        payload: {
+          results,
+          vendorAdcData,
+          dicomWindows,
+          bLow,
+          bHigh,
+          threshold,
+          discardedCount: emparejado.discardedCount,
+          matchErrors: emparejado.errors
+        }
       });
       
     } else if (type === 'EXPORT_DICOM') {

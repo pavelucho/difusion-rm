@@ -1,40 +1,58 @@
 import type { DicomSlice, AveragedSlice } from './types';
 import { es } from '../../i18n/es';
 
-export function groupAndAverageSlices(slices: DicomSlice[]): Map<string, AveragedSlice> {
-  const groups = new Map<string, AveragedSlice>();
-  
+export interface GroupedSlices {
+  /** Imágenes de difusión adquiridas, agrupadas por valor b y posición. */
+  diffusion: Map<string, AveragedSlice>;
+  /** Mapas de ADC ya calculados por el equipo, agrupados por serie y posición. */
+  vendorAdc: Map<string, AveragedSlice>;
+}
+
+/**
+ * Agrupa las imágenes por posición promediando las repeticiones.
+ *
+ * Los mapas de ADC del equipo se devuelven aparte en lugar de descartarse: son la
+ * referencia contra la que se valida el ADC calculado. Antes se filtraban aquí y
+ * después se buscaban en este mismo resultado, así que la comparación con el
+ * equipo quedaba permanentemente vacía.
+ */
+export function groupAndAverageSlices(slices: DicomSlice[]): GroupedSlices {
+  const diffusion = new Map<string, AveragedSlice>();
+  const vendorAdc = new Map<string, AveragedSlice>();
+
   for (const slice of slices) {
-    // Ignore vendor ADC maps
-    if (slice.metadata.isVendorADC) continue;
-    
-    const key = `${slice.metadata.bValue}|${slice.metadata.canonicalPosition.toFixed(2)}`;
-    
-    if (groups.has(key)) {
-      const existing = groups.get(key)!;
+    const posicion = slice.metadata.canonicalPosition.toFixed(2);
+    // El valor b de un mapa de ADC no significa nada; lo que lo identifica es su
+    // serie, para no promediar dos mapas distintos del mismo estudio.
+    const destino = slice.metadata.isVendorADC ? vendorAdc : diffusion;
+    const key = slice.metadata.isVendorADC
+      ? `${slice.metadata.seriesInstanceUID}|${posicion}`
+      : `${slice.metadata.bValue}|${posicion}`;
+
+    const existing = destino.get(key);
+    if (existing) {
       for (let i = 0; i < existing.pixelData.length; i++) {
         existing.pixelData[i] += slice.pixelData[i];
       }
       existing.count += 1;
     } else {
-      groups.set(key, {
+      destino.set(key, {
         metadata: slice.metadata,
         pixelData: new Float32Array(slice.pixelData),
         count: 1
       });
     }
   }
-  
-  // Finalize average
-  for (const group of groups.values()) {
-    if (group.count > 1) {
-      for (let i = 0; i < group.pixelData.length; i++) {
-        group.pixelData[i] /= group.count;
+
+  for (const grupo of [...diffusion.values(), ...vendorAdc.values()]) {
+    if (grupo.count > 1) {
+      for (let i = 0; i < grupo.pixelData.length; i++) {
+        grupo.pixelData[i] /= grupo.count;
       }
     }
   }
-  
-  return groups;
+
+  return { diffusion, vendorAdc };
 }
 
 export interface MatchedSlice {

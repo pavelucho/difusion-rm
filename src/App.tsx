@@ -98,6 +98,16 @@ export default function App() {
         const compBLow = payload.bLow;
         const compBHigh = payload.bHigh;
         const compThreshold = payload.threshold;
+
+        // El emparejamiento se rehace en cada cálculo según el modo, así que el
+        // recuento de cortes descartados cambia con él.
+        setMeta((prev: any) => prev && ({
+          ...prev,
+          sliceCount: res.length,
+          discardedCount: payload.discardedCount ?? prev.discardedCount,
+          errors: [...(payload.matchErrors ?? []), ...(prev.baseErrors ?? prev.errors ?? [])],
+          baseErrors: prev.baseErrors ?? prev.errors ?? [],
+        }));
         
         // Compute volume-wide window defaults
         const newDefaults: Record<string, { center: number, width: number, isFallback?: boolean, dicomRejected?: boolean, degenerate?: boolean }> = {
@@ -260,6 +270,18 @@ export default function App() {
                   <div className="text-amber-500 mt-1">
                     {es.warnSlicesDropped.replace('{n}', meta.discardedCount)}
                   </div>
+                )}
+                {meta.errors?.length > 0 && (
+                  <ul className="mt-2 flex flex-col gap-1">
+                    {meta.errors.map((aviso: string, i: number) => (
+                      <li
+                        key={i}
+                        className="text-amber-500 border-l-2 border-amber-600/60 pl-2 leading-snug"
+                      >
+                        {aviso}
+                      </li>
+                    ))}
+                  </ul>
                 )}
               </div>
 
