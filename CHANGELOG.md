@@ -4,6 +4,12 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
 
 ## [No publicado]
 
+### Publicado
+- Primera publicación en https://difusion-rm.pages.dev (Cloudflare Pages, plan
+  gratuito). Acceso libre, sin restricciones. Verificado en producción: HTTPS,
+  cabeceras de seguridad aplicadas, service worker activo con 10 recursos en caché
+  y manifiesto instalable.
+
 ### Añadido — usable sin preparar nada
 - El estudio se abre arrastrándolo a la ventana: carpeta, CD, ZIP o archivos DICOM
   sueltos, incluidos los que vienen sin extensión. Antes solo se aceptaba un ZIP.

@@ -1,5 +1,7 @@
 # Procesador de difusión — ADC · eADC · cDWI
 
+**En línea: https://difusion-rm.pages.dev**
+
 Aplicación web para post-procesado de resonancia magnética de difusión. Calcula mapas
 ADC, eADC y DWI computada (cDWI) a partir de una serie DICOM de difusión.
 
