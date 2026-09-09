@@ -26,6 +26,29 @@ La aplicación queda en `http://localhost:3000`.
 | `npm run lint`   | Verificación de tipos (`tsc --noEmit`, modo estricto) |
 | `npm run check`  | Tipos + pruebas + compilación, lo mismo que la CI  |
 
+## Publicación en la web
+
+La aplicación es un sitio estático: `npm run build` deja en `dist/` todo lo necesario,
+sin backend. Como el procesamiento ocurre en el navegador, no hay datos de paciente en
+tránsito ni almacenados en el servidor, y alojarla es un problema de hosting corriente.
+
+En Cloudflare Pages, Netlify o cualquier servicio equivalente:
+
+- Comando de compilación: `npm ci && npm run build`
+- Directorio publicado: `dist`
+- Versión de Node: 22
+
+`public/_headers` y `public/_redirects` ya traen las cabeceras de seguridad —incluida
+una política de contenido que solo permite conexiones al propio origen— y el
+enrutamiento de aplicación de página única, en el formato que entienden Cloudflare
+Pages y Netlify. Con otro proveedor, tradúzcalas a su configuración.
+
+### Instalación como aplicación
+
+El sitio es una PWA: el navegador ofrece instalarla, y una vez cargada funciona sin
+conexión. Es lo que permite usarla en una sala sin red o desde cualquier equipo sin
+instalar nada. Las actualizaciones se descargan solas y se aplican al recargar.
+
 ## Flujo de uso
 
 1. **Cargar el ZIP** con la serie DICOM de difusión original.
@@ -102,3 +125,28 @@ src/
 
 El cálculo pesado vive en un Web Worker (`src/lib/diffusion/worker.ts`), de modo que la
 interfaz no se bloquea con series grandes.
+
+## Verificación con estudios reales
+
+Las pruebas incluyen una suite que se ejecuta contra estudios DICOM de verdad. No hay
+ninguno en el repositorio —contienen datos de paciente y no deben versionarse—, así que
+se le indica dónde están:
+
+```bash
+ESTUDIOS_DICOM=/ruta/a/estudios npm test
+```
+
+La carpeta debe contener una subcarpeta por estudio. Sin esa variable, esa suite se
+salta y el resto de pruebas se ejecuta igual.
+
+Comprueba, para cada estudio: que todas las imágenes se leen, que el valor b sale de un
+tag de valor b y no de una inferencia, que hay al menos dos valores b, que los píxeles
+tienen rango plausible, que los cortes emparejan sin descartes y que el ADC medio cae en
+rango fisiológico. Además exporta un mapa ADC y lo vuelve a leer con el propio lector
+para verificar la transfer syntax, el UID de serie y el escalado.
+
+## Trazabilidad
+
+Cada DICOM derivado lleva en su descripción de derivación (0008,2111) la fórmula
+aplicada, el umbral de enmascarado, el modo de corregistro y la versión de la
+aplicación que lo calculó, que también aparece en el pie de la interfaz.

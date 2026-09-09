@@ -1301,6 +1301,9 @@ export default function App() {
 
         <div className="text-[10px] text-gray-500 max-w-sm text-right ml-auto">
           {es.disclaimer}
+          <span className="ml-2 opacity-70">
+            v{__APP_VERSION__} · {__BUILD_DATE__}
+          </span>
         </div>
       </div>
     </div>

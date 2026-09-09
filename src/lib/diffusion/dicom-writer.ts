@@ -122,9 +122,16 @@ export async function createDerivedDicom(
   else if (mapType === 'CDWI' && !params.bValues) derivationFormula = `cDWI = S(b=${params.bLow}) * exp((${params.bLow}-${params.bTarget}) * ADC)`;
   else derivationFormula = `Multi-b fit`;
   
-  const derivationDesc = `${derivationFormula}; mask bg+3SD=${params.threshold.toFixed(1)}; range 0-4e-3 mm2/s; rigid registration ${params.registration}`;
-  
+  // La descripción de derivación es el rastro que queda dentro del archivo: quien
+  // reciba el mapa tiene que poder saber con qué se calculó y con qué versión.
+  const derivationDesc =
+    `${derivationFormula}; mask bg+3SD=${params.threshold.toFixed(1)}; ` +
+    `range 0-4e-3 mm2/s; registration ${params.registration}; ` +
+    `difusion-rm ${__APP_VERSION__} (${__BUILD_DATE__})`;
+
   dataset['00082111'] = { vr: 'ST', Value: [derivationDesc] };
+  dataset['00081090'] = { vr: 'LO', Value: ['difusion-rm'] };  // Manufacturer's Model Name
+  dataset['00181020'] = { vr: 'LO', Value: [`difusion-rm ${__APP_VERSION__}`] }; // Software Versions
   
   dataset['00281052'] = { vr: 'DS', Value: [0] };
   dataset['00281053'] = { vr: 'DS', Value: [1] };
