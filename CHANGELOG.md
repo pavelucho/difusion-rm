@@ -4,6 +4,15 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
 
 ## [No publicado]
 
+### Añadido — usable sin preparar nada
+- El estudio se abre arrastrándolo a la ventana: carpeta, CD, ZIP o archivos DICOM
+  sueltos, incluidos los que vienen sin extensión. Antes solo se aceptaba un ZIP.
+- Botón para abrir la carpeta del estudio directamente, sin comprimir nada.
+- Pantalla inicial que explica en tres pasos qué hace la herramienta y recuerda que
+  el cálculo ocurre en el propio equipo.
+- `npm run empaquetar` genera el ZIP listo para subir desde el panel de Cloudflare,
+  para publicar sin usar la terminal.
+
 ### Añadido — despliegue
 - Publicación en Cloudflare Pages con `npm run deploy`, autenticando por navegador
   con `wrangler login`: el proyecto no guarda ni necesita ningún token de API.

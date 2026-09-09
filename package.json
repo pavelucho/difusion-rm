@@ -18,7 +18,8 @@
     "test:watch": "vitest",
     "check": "npm run lint && npm run test && npm run build",
     "deploy": "npm run build && wrangler pages deploy dist --project-name=difusion-rm",
-    "deploy:preview": "npm run build && wrangler pages deploy dist --project-name=difusion-rm --branch=preview"
+    "deploy:preview": "npm run build && wrangler pages deploy dist --project-name=difusion-rm --branch=preview",
+    "empaquetar": "npm run build && rm -f difusion-rm-web.zip && cd dist && zip -r -q ../difusion-rm-web.zip . && cd .. && echo 'Listo: difusion-rm-web.zip — súbalo en Cloudflare Pages > Cargar recursos'"
   },
   "dependencies": {
     "dcmjs": "^0.52.0",

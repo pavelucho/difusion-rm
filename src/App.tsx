@@ -1,9 +1,10 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { Download, Loader2, Save } from 'lucide-react';
+import { Download, Loader2, Save, Upload } from 'lucide-react';
 import { es } from './i18n/es';
 import { RoiShape, RoiState, rasterizeRoi } from './lib/roi';
 import { computeRoiStats, computeContrast, computeLinCCC } from './lib/diffusion/stats';
 import { Panel } from './components/Panel';
+import { archivosDesdeArrastre, clasificarEntrada } from './lib/entrada-archivos';
 
 type AppState = 'IDLE' | 'LOADING' | 'COMPUTING' | 'READY' | 'EXPORTING' | 'ERROR';
 
@@ -12,6 +13,7 @@ export default function App() {
   const [progressMsg, setProgressMsg] = useState('');
   const [progressPct, setProgressPct] = useState(0);
   const [errorMsg, setErrorMsg] = useState('');
+  const [arrastrando, setArrastrando] = useState(false);
   
   const workerRef = useRef<Worker | null>(null);
   const [meta, setMeta] = useState<any>(null);
@@ -204,13 +206,50 @@ export default function App() {
     };
   }, []);
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setAppState('LOADING');
-      setErrorMsg('');
-      workerRef.current?.postMessage({ type: 'LOAD_ZIP', payload: { file } });
+  /**
+   * Punto de entrada único del estudio, venga como venga: carpeta, ZIP, CD o
+   * archivos sueltos. Quien usa la herramienta no tiene por qué preparar nada.
+   */
+  const cargarArchivos = (archivos: File[]) => {
+    if (archivos.length === 0) return;
+
+    const entrada = clasificarEntrada(archivos);
+
+    if (entrada.tipo === 'archivos' && entrada.archivos.length === 0) {
+      setErrorMsg(es.errSinDicom);
+      setAppState('ERROR');
+      return;
     }
+
+    setAppState('LOADING');
+    setErrorMsg('');
+
+    if (entrada.tipo === 'zip') {
+      workerRef.current?.postMessage({ type: 'LOAD_ZIP', payload: { file: entrada.zip } });
+    } else {
+      workerRef.current?.postMessage({ type: 'LOAD_FILES', payload: { files: entrada.archivos } });
+    }
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    cargarArchivos(Array.from(e.target.files ?? []));
+    e.target.value = ''; // permite volver a elegir el mismo estudio
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    setArrastrando(false);
+    cargarArchivos(await archivosDesdeArrastre(e.dataTransfer));
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    if (!arrastrando) setArrastrando(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    // Solo cuando el puntero abandona la ventana, no al pasar entre elementos.
+    if (e.currentTarget === e.target) setArrastrando(false);
   };
 
   const triggerRecompute = (newParams: any) => {
@@ -223,15 +262,32 @@ export default function App() {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-[#1A1614] text-[#8E9299] font-sans overflow-hidden">
+    <div
+      className="relative flex flex-col h-screen bg-[#1A1614] text-[#8E9299] font-sans overflow-hidden"
+      onDrop={handleDrop}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+    >
       <div className="flex flex-1 overflow-hidden">
         {/* Left Sidebar */}
         <div className="w-80 bg-[#2B221C] p-4 flex flex-col gap-4 overflow-y-auto shrink-0 border-r border-[#3a3028]">
           <h1 className="text-[#F27D26] font-bold text-lg leading-tight">{es.appTitle}</h1>
           
-          <label className="cursor-pointer bg-[#F27D26] hover:bg-[#d96a1a] text-[#1A1614] font-semibold py-2 px-4 rounded text-center transition-colors">
+          <label className="cursor-pointer bg-[#F27D26] hover:bg-[#d96a1a] text-[#1A1614] font-semibold py-2 px-4 rounded text-center transition-colors focus-within:ring-2 focus-within:ring-[#F27D26] focus-within:ring-offset-2 focus-within:ring-offset-[#2B221C]">
             {es.upload}
-            <input type="file" accept=".zip" className="hidden" onChange={handleFileUpload} />
+            <input
+              type="file"
+              /* @ts-expect-error webkitdirectory no está en los tipos de React */
+              webkitdirectory=""
+              directory=""
+              multiple
+              className="sr-only"
+              onChange={handleFileUpload}
+            />
+          </label>
+          <label className="cursor-pointer text-xs text-center underline underline-offset-2 hover:text-[#F27D26] transition-colors focus-within:text-[#F27D26]">
+            {es.uploadZip}
+            <input type="file" multiple className="sr-only" onChange={handleFileUpload} />
           </label>
           <p className="text-xs text-center">{es.uploadHint}</p>
           
@@ -1269,8 +1325,40 @@ export default function App() {
               })}
             </div>
           )}
+
+          {appState === 'IDLE' && (
+            <div className="flex-1 flex items-center justify-center p-8">
+              <div className="max-w-lg text-center flex flex-col items-center gap-5">
+                <Upload className="text-[#F27D26]" size={44} strokeWidth={1.5} aria-hidden="true" />
+                <div>
+                  <h2 className="text-xl font-semibold text-gray-100">{es.bienvenidaTitulo}</h2>
+                  <p className="text-sm mt-2">{es.bienvenidaSubtitulo}</p>
+                </div>
+                <ol className="text-sm text-left flex flex-col gap-2 border-t border-[#3a3028] pt-5 w-full">
+                  {[es.bienvenidaPaso1, es.bienvenidaPaso2, es.bienvenidaPaso3].map((paso, i) => (
+                    <li key={i} className="flex gap-3">
+                      <span className="text-[#F27D26] font-semibold tabular-nums shrink-0">{i + 1}.</span>
+                      <span>{paso}</span>
+                    </li>
+                  ))}
+                </ol>
+                <p className="text-xs text-gray-500 border-t border-[#3a3028] pt-4 w-full">
+                  {es.bienvenidaPrivacidad}
+                </p>
+              </div>
+            </div>
+          )}
         </div>
       </div>
+
+      {arrastrando && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-[#1A1614]/90 border-4 border-dashed border-[#F27D26] pointer-events-none">
+          <div className="flex flex-col items-center gap-3">
+            <Upload className="text-[#F27D26]" size={56} strokeWidth={1.5} aria-hidden="true" />
+            <p className="text-xl font-semibold text-[#F27D26]">{es.soltarAqui}</p>
+          </div>
+        </div>
+      )}
 
       {/* Bottom Bar */}
       <div className="bg-[#2B221C] p-3 border-t border-[#3a3028] flex items-center gap-6 shrink-0 z-10">

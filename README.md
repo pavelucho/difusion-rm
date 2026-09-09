@@ -36,6 +36,16 @@ El despliegue completo son 14 archivos y 1,2 MB, muy por debajo de los límites 
 plan gratuito de Cloudflare Pages (20 000 archivos y 25 MiB por archivo, con ancho de
 banda ilimitado y 500 compilaciones al mes). El plan gratuito basta y sobra.
 
+### Publicar sin usar la terminal
+
+```bash
+npm run empaquetar
+```
+
+Genera `difusion-rm-web.zip`. En el panel de Cloudflare: *Workers y Pages → Crear →
+Pages → Cargar recursos*, se le da nombre al proyecto y se arrastra ese archivo. Para
+actualizar, se vuelve a generar y se sube una versión nueva al mismo proyecto.
+
 ### Publicar desde el equipo
 
 ```bash
@@ -81,9 +91,15 @@ instalar nada. Las actualizaciones se descargan solas y se aplican al recargar.
 
 ## Flujo de uso
 
-1. **Cargar el ZIP** con la serie DICOM de difusión original.
+Quien la usa no instala nada: abre la dirección web y trabaja. La aplicación acepta el
+estudio tal como esté —una carpeta copiada del PACS, el contenido de un CD, un ZIP o los
+archivos DICOM sueltos—, arrastrándolo a la ventana o con el botón *Abrir carpeta del
+estudio*. Los archivos sin extensión, como los que traen muchos CD, también valen.
+
+1. **Abrir el estudio**: arrastrarlo a la ventana o elegir la carpeta.
 2. **Configurar los parámetros**: b baja de referencia, b alta, b objetivo para la cDWI,
    umbral de ruido, corregistro y, si hay tres o más valores b, ajuste multi-b.
+   La aplicación propone valores razonables y avisa de lo que compromete el resultado.
 3. **Revisar los mapas** en los paneles sincronizados (ADC, eADC, cDWI, R²).
 4. **Exportar** los mapas como serie DICOM en un ZIP, o descargar el registro de
    procesamiento en JSON para trazabilidad.

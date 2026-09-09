@@ -27,14 +27,25 @@ self.onmessage = async (e: MessageEvent) => {
   const { type, payload } = e.data;
 
   try {
-    if (type === 'LOAD_ZIP') {
-      const { file } = payload;
-      const zip = new JSZip();
-      const unzipped = await zip.loadAsync(file);
-      
-      const files = Object.values(unzipped.files).filter(f => !f.dir);
-      const totalFiles = files.length;
-      
+    if (type === 'LOAD_ZIP' || type === 'LOAD_FILES') {
+      // Dos formas de llegar al mismo sitio: un ZIP que hay que descomprimir, o los
+      // archivos del estudio tal cual, que es como los tiene quien copia una carpeta
+      // del PACS o mete el CD. En ambos casos se acaba con una lista de búferes.
+      let leerArchivo: (indice: number) => Promise<ArrayBuffer>;
+      let totalFiles: number;
+
+      if (type === 'LOAD_ZIP') {
+        const zip = new JSZip();
+        const unzipped = await zip.loadAsync(payload.file);
+        const entradas = Object.values(unzipped.files).filter(f => !f.dir);
+        totalFiles = entradas.length;
+        leerArchivo = (i) => entradas[i].async('arraybuffer');
+      } else {
+        const archivos: File[] = payload.files;
+        totalFiles = archivos.length;
+        leerArchivo = (i) => archivos[i].arrayBuffer();
+      }
+
       const slices: DicomSlice[] = [];
       let processedCount = 0;
       // Un archivo que no es DICOM se ignora sin más; uno que sí lo es pero no se
@@ -42,9 +53,9 @@ self.onmessage = async (e: MessageEvent) => {
       // lugar de desaparecer y dejar una serie incompleta sin explicación.
       const ilegibles = new Map<string, number>();
 
-      for (const f of files) {
+      for (let indice = 0; indice < totalFiles; indice++) {
         try {
-          const buffer = await f.async('arraybuffer');
+          const buffer = await leerArchivo(indice);
           const slice = parseDicom(buffer);
           slices.push(slice);
         } catch (err) {

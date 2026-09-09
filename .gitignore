@@ -13,3 +13,6 @@ estudios/
 # Credenciales y estado de wrangler: nunca versionar
 .wrangler/
 .dev.vars
+
+# Paquete de despliegue generado
+difusion-rm-web.zip
