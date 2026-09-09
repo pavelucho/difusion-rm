@@ -5,6 +5,8 @@ import { estimateNoiseThreshold, computeTwoPointMaps, computeMultiBMaps } from '
 import { registerSlice } from './registration';
 import { createDerivedDicom, exportZip } from './dicom-writer';
 import type { DicomSlice, AveragedSlice, MapResult } from './types';
+import { DicomNoSoportadoError } from './pixel-data';
+import { es } from '../../i18n/es';
 
 // We store state in the worker to handle recomputations and exports
 let state: {
@@ -33,22 +35,37 @@ self.onmessage = async (e: MessageEvent) => {
       
       const slices: DicomSlice[] = [];
       let processedCount = 0;
-      
+      // Un archivo que no es DICOM se ignora sin más; uno que sí lo es pero no se
+      // puede decodificar tiene que llegar al usuario, agrupado por motivo, en
+      // lugar de desaparecer y dejar una serie incompleta sin explicación.
+      const ilegibles = new Map<string, number>();
+
       for (const f of files) {
         try {
           const buffer = await f.async('arraybuffer');
           const slice = parseDicom(buffer);
           slices.push(slice);
         } catch (err) {
-          // Ignore non-dicom files
+          if (err instanceof DicomNoSoportadoError) {
+            ilegibles.set(err.message, (ilegibles.get(err.message) ?? 0) + 1);
+          }
+          // Cualquier otro error se trata como archivo que no es DICOM.
         }
         processedCount++;
         if (processedCount % 10 === 0 || processedCount === totalFiles) {
-          self.postMessage({ type: 'PROGRESS', payload: { step: 'Lectura DICOM', progress: processedCount / totalFiles } });
+          self.postMessage({ type: 'PROGRESS', payload: { step: es.pasoLectura, progress: processedCount / totalFiles } });
         }
       }
-      
-      self.postMessage({ type: 'PROGRESS', payload: { step: 'Agrupación', progress: 1.0 } });
+
+      const erroresLectura = [...ilegibles.entries()].map(([motivo, n]) =>
+        es.errArchivosIlegibles.replace('{n}', String(n)).replace('{motivo}', motivo)
+      );
+
+      if (slices.length === 0) {
+        throw new Error(erroresLectura[0] ?? es.errSinImagenes);
+      }
+
+      self.postMessage({ type: 'PROGRESS', payload: { step: es.pasoAgrupacion, progress: 1.0 } });
       
       const groups = groupAndAverageSlices(slices);
       
@@ -65,6 +82,18 @@ self.onmessage = async (e: MessageEvent) => {
       let bHigh = bValues[bValues.length - 1];
       
       const { matched, discardedCount, errors } = matchSlices(groups, bValues);
+
+      // Avisos sobre la procedencia de los valores b: un ADC calculado sobre una b
+      // deducida del nombre de la secuencia no merece la misma confianza que uno
+      // calculado sobre el tag estándar.
+      const sinValorB = slices.filter(s => s.metadata.bValueSource === 'ausente').length;
+      const bDeTexto = slices.filter(
+        s => s.metadata.bValueSource === 'nombre-secuencia' || s.metadata.bValueSource === 'descripcion'
+      ).length;
+
+      const avisos = [...erroresLectura];
+      if (sinValorB > 0) avisos.push(es.warnBInferred.replace('{n}', String(sinValorB)));
+      if (bDeTexto > 0) avisos.push(es.warnBFromText.replace('{n}', String(bDeTexto)));
       
       let threshold = 0;
       if (matched.length > 0) {
@@ -94,7 +123,7 @@ self.onmessage = async (e: MessageEvent) => {
           bHigh,
           threshold,
           discardedCount,
-          errors,
+          errors: [...avisos, ...errors],
           sliceCount: matched.length,
           hasVendorAdc: vendorAdcMaps.length > 0,
           columns: matched.length > 0 ? matched[0].slicesByBValue.get(bLow)!.metadata.columns : 256,
@@ -160,7 +189,7 @@ self.onmessage = async (e: MessageEvent) => {
         results.push({ sliceIndex: i, maps, registeredSlices, transforms });
         
         if (i % 5 === 0 || i === totalSlices - 1) {
-          self.postMessage({ type: 'PROGRESS', payload: { step: 'Cálculo', progress: (i + 1) / totalSlices } });
+          self.postMessage({ type: 'PROGRESS', payload: { step: es.pasoCalculo, progress: (i + 1) / totalSlices } });
         }
       }
       
@@ -238,11 +267,11 @@ self.onmessage = async (e: MessageEvent) => {
         processed++;
         
         if (processed % 10 === 0) {
-          self.postMessage({ type: 'PROGRESS', payload: { step: 'Generando DICOM', progress: processed / totalToExport } });
+          self.postMessage({ type: 'PROGRESS', payload: { step: es.pasoGenerandoDicom, progress: processed / totalToExport } });
         }
       }
       
-      self.postMessage({ type: 'PROGRESS', payload: { step: 'Comprimiendo ZIP', progress: 1.0 } });
+      self.postMessage({ type: 'PROGRESS', payload: { step: es.pasoComprimiendo, progress: 1.0 } });
       const zipBlob = await exportZip(filesToExport);
       
       const saturationPct = totalUnmasked > 0 ? (totalSaturated / (totalUnmasked * 3)) * 100 : 0;

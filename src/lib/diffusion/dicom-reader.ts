@@ -1,5 +1,12 @@
 import dicomParser from 'dicom-parser';
 import type { DicomSlice, Point3D } from './types';
+import { readBValue } from './b-value';
+import {
+  DicomNoSoportadoError,
+  describeTransferSyntax,
+  readFrameCount,
+  readPixelSamples,
+} from './pixel-data';
 
 function crossProduct(a: Point3D, b: Point3D): Point3D {
   return {
@@ -30,6 +37,28 @@ function parseVectors(val: string | undefined): [Point3D, Point3D] | undefined {
     ];
   }
   return undefined;
+}
+
+/**
+ * ¿Es un mapa de ADC ya calculado por el equipo?
+ *
+ * Antes bastaba con que la descripción de serie contuviera «adc» en cualquier
+ * posición, lo que también acierta con «eADC» o «ADC_calc» y hacía desaparecer
+ * series que sí eran de difusión. Ahora se exige ADC como palabra propia, o bien
+ * una señal inequívoca: el tipo de imagen o el tipo de rescale.
+ */
+function detectVendorADC(
+  seriesDescription: string,
+  imageType: string,
+  rescaleType: string | undefined
+): boolean {
+  if (rescaleType === '10-6 mm2/s') return true;
+
+  const componentesTipo = imageType.split('\\').map(c => c.trim().toUpperCase());
+  if (componentesTipo.includes('ADC')) return true;
+
+  // «ADC» delimitado: acierta con "DWI ADC" y "ADC_map", no con "eADC".
+  return /(^|[^a-z])adc([^a-z]|$)/i.test(seriesDescription);
 }
 
 export function parseDicom(buffer: ArrayBuffer): DicomSlice {
@@ -76,61 +105,11 @@ export function parseDicom(buffer: ArrayBuffer): DicomSlice {
   const echoTimeStr = dataset.string('x00180081');
   const echoTime = echoTimeStr ? parseFloat(echoTimeStr) : undefined;
 
-  let bValue: number | undefined = undefined;
-  let bValueInferred = false;
-
-  const bValueStr = dataset.string('x00189087');
-  if (bValueStr !== undefined) {
-    bValue = parseFloat(bValueStr);
-  }
-
-  if (bValue === undefined) {
-    const diffusionSeq = dataset.elements.x00189117;
-    if (diffusionSeq && diffusionSeq.items && diffusionSeq.items.length > 0) {
-      for (const item of diffusionSeq.items) {
-        const itemDataset = item.dataSet;
-        if (itemDataset) {
-          const itemBValueStr = itemDataset.string('x00189087');
-          if (itemBValueStr !== undefined) {
-            bValue = parseFloat(itemBValueStr);
-            break;
-          }
-        }
-      }
-    }
-  }
-
-  if (bValue === undefined) {
-    const siemensBStr = dataset.string('x0019100c');
-    if (siemensBStr !== undefined) {
-      bValue = parseFloat(siemensBStr);
-    }
-  }
-
-  if (bValue === undefined) {
-    const geBStr = dataset.string('x00431039');
-    if (geBStr !== undefined) {
-      const firstVal = parseFloat(geBStr.split('\\')[0]);
-      if (!isNaN(firstVal)) {
-        bValue = firstVal % 1000000000;
-      }
-    }
-  }
-
-  if (bValue === undefined) {
-    const philipsB = dataset.float('x20011003');
-    if (philipsB !== undefined) {
-      bValue = philipsB;
-    }
-  }
-
-  if (bValue === undefined || isNaN(bValue)) {
-    bValue = 0;
-    bValueInferred = true;
-  }
+  const { value: bValue, source: bValueSource, inferred: bValueInferred } = readBValue(dataset);
 
   const rescaleType = dataset.string('x00281054');
-  const isVendorADC = seriesDescription.toLowerCase().includes('adc') || rescaleType === '10-6 mm2/s';
+  const imageType = dataset.string('x00080008') ?? '';
+  const isVendorADC = detectVendorADC(seriesDescription, imageType, rescaleType);
 
   const rescaleInterceptStr = dataset.string('x00281052');
   const rescaleSlopeStr = dataset.string('x00281053');
@@ -150,24 +129,15 @@ export function parseDicom(buffer: ArrayBuffer): DicomSlice {
     }
   }
 
-  const bitsAllocated = dataset.uint16('x00280100') ?? 16;
-  const pixelRepresentation = dataset.uint16('x00280103') ?? 0;
-
-  const pixelDataElement = dataset.elements.x7fe00010;
-  const pixelDataLength = pixelDataElement.length;
-  const pixelDataOffset = pixelDataElement.dataOffset;
-  
-  const rawPixelData = new Uint8Array(dataset.byteArray.buffer, dataset.byteArray.byteOffset + pixelDataOffset, pixelDataLength);
-  const alignedBuffer = new ArrayBuffer(pixelDataLength);
-  new Uint8Array(alignedBuffer).set(rawPixelData);
-
-  let pixels: Int8Array | Uint8Array | Int16Array | Uint16Array;
-  
-  if (bitsAllocated <= 8) {
-    pixels = pixelRepresentation === 1 ? new Int8Array(alignedBuffer) : new Uint8Array(alignedBuffer);
-  } else {
-    pixels = pixelRepresentation === 1 ? new Int16Array(alignedBuffer) : new Uint16Array(alignedBuffer);
+  const frameCount = readFrameCount(dataset);
+  if (frameCount > 1) {
+    throw new DicomNoSoportadoError(
+      `Imagen multifotograma (${frameCount} fotogramas) todavía no soportada. ` +
+        'Exporte la serie como DICOM de un fotograma por archivo.'
+    );
   }
+
+  const pixels = readPixelSamples(dataset);
 
   const floatPixels = new Float32Array(pixels.length);
   for (let i = 0; i < pixels.length; i++) {
@@ -191,7 +161,10 @@ export function parseDicom(buffer: ArrayBuffer): DicomSlice {
       echoTime,
       bValue,
       bValueInferred,
+      bValueSource,
       isVendorADC,
+      transferSyntax: describeTransferSyntax(dataset.string('x00020010')),
+      photometricInterpretation: dataset.string('x00280004') ?? 'MONOCHROME2',
       canonicalPosition,
       rescaleIntercept,
       rescaleSlope,

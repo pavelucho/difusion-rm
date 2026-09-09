@@ -1,3 +1,5 @@
+import type { BValueSource } from './b-value';
+
 export interface Point3D {
   x: number;
   y: number;
@@ -20,7 +22,12 @@ export interface DicomMetadata {
   echoTime?: number;
   bValue: number;
   bValueInferred: boolean;
+  /** Tag del que salió el valor b. Se conserva para el registro de procesamiento. */
+  bValueSource: BValueSource;
   isVendorADC: boolean;
+  /** Nombre legible de la transfer syntax con la que venía el archivo. */
+  transferSyntax: string;
+  photometricInterpretation: string;
   patientName?: string;
   patientID?: string;
   patientBirthDate?: string;
