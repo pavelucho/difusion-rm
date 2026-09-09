@@ -341,6 +341,35 @@ export default function App() {
                 )}
               </div>
 
+              {meta.series?.length > 1 && (
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs font-semibold" htmlFor="selector-serie">
+                    {es.serieUsada}
+                  </label>
+                  <select
+                    id="selector-serie"
+                    className="bg-[#1A1614] border border-[#3a3028] p-1 rounded text-sm text-gray-200"
+                    value={meta.serieElegida}
+                    onChange={e => {
+                      setAppState('LOADING');
+                      setErrorMsg('');
+                      workerRef.current?.postMessage({
+                        type: 'SELECT_SERIES',
+                        payload: { id: e.target.value },
+                      });
+                    }}
+                  >
+                    {meta.series.map((s: any) => (
+                      <option key={s.id} value={s.id}>
+                        {s.descripcion} — {es.serieImagenes.replace('{n}', String(s.imagenes))}
+                        {' · '}
+                        {s.esDifusion ? `b ${s.valoresB.join(', ')}` : es.serieSinDifusion}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
               <div className="flex flex-col gap-1">
                 <label className="text-xs font-semibold">{es.lowB}</label>
                 <select 

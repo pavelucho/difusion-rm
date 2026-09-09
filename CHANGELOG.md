@@ -4,6 +4,20 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
 
 ## [No publicado]
 
+### Corregido — estudios completos del PACS
+- **Un estudio exportado entero no se podía procesar.** La aplicación daba por hecho
+  que solo había la serie de difusión; con las 21 series de un examen real (T1, T2,
+  STIR, dinámicos) trataba como b = 0 todo lo que no lleva valor b y lo promediaba
+  junto a la difusión, mezclando además matrices de 256, 512 y 1024 px.
+- Ahora se inventaría el estudio por series, se detecta la de difusión y el cálculo
+  se hace solo sobre ella. Si hay más de una candidata, se puede cambiar desde un
+  desplegable, y la aplicación dice qué serie está usando.
+- Las imágenes de distinta matriz ya no se promedian entre sí aunque coincidan en
+  posición y valor b: no son repeticiones, son secuencias distintas.
+- Los archivos que no pueden ser imágenes se descartan por el nombre antes de
+  descomprimirlos. Un export de PACS trae dentro el visor de escritorio, su
+  instalador y PDFs; se estaban descomprimiendo cientos de megas para nada.
+
 ### Publicado
 - Primera publicación en https://difusion-rm.pages.dev (Cloudflare Pages, plan
   gratuito). Acceso libre, sin restricciones. Verificado en producción: HTTPS,

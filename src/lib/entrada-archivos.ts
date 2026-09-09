@@ -6,10 +6,26 @@
  */
 
 /** Extensiones que no son imágenes y aparecen en los CD de estudios. */
-const DESCARTABLES = /\.(zip|txt|pdf|html?|xml|ini|inf|exe|dll|jpe?g|png|gif|db|ds_store)$/i;
+const DESCARTABLES =
+  /\.(zip|7z|rar|gz|tar|txt|pdf|rtf|docx?|html?|xml|json|css|js|ini|inf|cfg|log|exe|msi|dmg|pkg|app|dll|so|dylib|bat|sh|jpe?g|png|gif|bmp|tiff?|mp4|avi|mov|db|sqlite|ds_store)$/i;
 
 export function esZip(archivo: File): boolean {
   return /\.zip$/i.test(archivo.name) || archivo.type === 'application/zip';
+}
+
+/**
+ * Filtro por nombre, aplicable antes de leer el contenido.
+ *
+ * Los estudios exportados de un PACS traen dentro el visor de escritorio, sus
+ * instaladores, informes en PDF y fotos sueltas. Descomprimir un instalador de
+ * cientos de megas para descubrir que no es una imagen es tiempo y memoria
+ * tirados, así que se descarta por el nombre antes de tocarlo.
+ */
+export function nombrePuedeSerDicom(ruta: string): boolean {
+  const nombre = ruta.split('/').pop() ?? ruta;
+  if (!nombre || nombre.startsWith('.')) return false;
+  if (nombre.toUpperCase() === 'DICOMDIR') return false;
+  return !DESCARTABLES.test(nombre);
 }
 
 /**
@@ -18,8 +34,7 @@ export function esZip(archivo: File): boolean {
  * decide de verdad es el lector, que rechaza lo que no puede interpretar.
  */
 export function puedeSerDicom(archivo: File): boolean {
-  if (archivo.name.startsWith('.')) return false;
-  if (DESCARTABLES.test(archivo.name)) return false;
+  if (!nombrePuedeSerDicom(archivo.name)) return false;
   return archivo.size > 132; // por debajo del preámbulo DICOM no cabe una imagen
 }
 

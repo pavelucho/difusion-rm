@@ -2,7 +2,12 @@ import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import { parseDicom } from '../dicom-reader';
-import { groupAndAverageSlices, matchSlices } from '../series-builder';
+import {
+  filtrarPorSerie,
+  groupAndAverageSlices,
+  inventariarSeries,
+  matchSlices,
+} from '../series-builder';
 import { computeTwoPointMaps, estimateNoiseThreshold } from '../maps';
 import { createDerivedDicom } from '../dicom-writer';
 import type { DicomSlice } from '../types';
@@ -51,10 +56,27 @@ function leerEstudio(ruta: string): DicomSlice[] {
 describe.skipIf(!hayEstudios)('estudios DICOM reales', () => {
   for (const estudio of estudios()) {
     describe(estudio.nombre, () => {
-      const cortes = leerEstudio(estudio.ruta);
+      const todos = leerEstudio(estudio.ruta);
+
+      // Igual que hace la aplicación: se inventaría el estudio y se trabaja solo
+      // sobre la serie de difusión. Un export completo del PACS trae además T1,
+      // T2, STIR y dinámicos, que no tienen nada que ver con el cálculo.
+      const series = inventariarSeries(todos);
+      const seriesDifusion = series.filter(s => s.esDifusion);
+      const cortes = seriesDifusion.length
+        ? filtrarPorSerie(todos, seriesDifusion[0].seriesUIDs)
+        : [];
 
       it('lee todas las imágenes sin fallar', () => {
+        expect(todos.length).toBeGreaterThan(0);
+      });
+
+      it('identifica una serie de difusión entre todas las del estudio', () => {
+        expect(seriesDifusion.length, 'ninguna serie de difusión detectada').toBeGreaterThan(0);
         expect(cortes.length).toBeGreaterThan(0);
+        // La serie elegida no puede arrastrar imágenes de otras secuencias.
+        const matrices = new Set(cortes.map(c => `${c.metadata.rows}x${c.metadata.columns}`));
+        expect(matrices.size, `la serie mezcla matrices: ${[...matrices]}`).toBe(1);
       });
 
       it('obtiene el valor b de un tag de valor b, no por inferencia', () => {

@@ -1,6 +1,14 @@
 import JSZip from 'jszip';
 import { parseDicom } from './dicom-reader';
-import { groupAndAverageSlices, matchSlices, type MatchedSlice } from './series-builder';
+import {
+  filtrarPorSerie,
+  groupAndAverageSlices,
+  inventariarSeries,
+  matchSlices,
+  type MatchedSlice,
+  type SerieDetectada,
+} from './series-builder';
+import { nombrePuedeSerDicom } from '../entrada-archivos';
 import { estimateNoiseThreshold, computeTwoPointMaps, computeMultiBMaps } from './maps';
 import { registerSlice } from './registration';
 import { createDerivedDicom, exportZip } from './dicom-writer';
@@ -10,6 +18,10 @@ import { es } from '../../i18n/es';
 
 // We store state in the worker to handle recomputations and exports
 let state: {
+  /** Todos los cortes legibles del estudio, para poder cambiar de serie sin releer. */
+  todosLosCortes: DicomSlice[];
+  series: SerieDetectada[];
+  serieElegida: string[];
   /** Grupos de difusión; el emparejamiento se rehace según el modo de cálculo. */
   diffusionGroups: Map<string, AveragedSlice>;
   matched: MatchedSlice[];
@@ -22,6 +34,109 @@ let state: {
   bTarget: number;
   useMultiB: boolean;
 } | null = null;
+
+/**
+ * Deja el estudio listo para calcular a partir de una serie concreta, y avisa a la
+ * interfaz. Se usa al cargar y cada vez que se cambia de serie, sin releer nada:
+ * los cortes ya están en memoria.
+ */
+function prepararSerie(
+  todosLosCortes: DicomSlice[],
+  series: SerieDetectada[],
+  elegida: SerieDetectada,
+  erroresLectura: string[]
+): void {
+  const cortesDeLaSerie = filtrarPorSerie(todosLosCortes, elegida.seriesUIDs);
+
+    const { diffusion, vendorAdc } = groupAndAverageSlices(cortesDeLaSerie);
+
+    const vendorAdcMaps = Array.from(vendorAdc.values())
+      .sort((a, b) => a.metadata.canonicalPosition - b.metadata.canonicalPosition);
+
+    const bValues = Array.from(
+      new Set(Array.from(diffusion.values()).map(g => g.metadata.bValue))
+    ).sort((a, b) => a - b);
+
+    // Se prefiere una b de referencia >= 150 s/mm² para anular el sesgo por
+    // microperfusión, pero solo entre las que no son la b más alta: con una serie
+    // de dos valores b —el caso habitual— elegirla sin ese filtro dejaba b baja y
+    // b alta en el mismo valor y el cálculo se detenía con «valores b idénticos».
+    const bHigh = bValues[bValues.length - 1];
+    const candidatasBajas = bValues.filter(b => b < bHigh);
+    const bLow = candidatasBajas.find(b => b >= 150) ?? candidatasBajas[0] ?? bValues[0];
+
+    // Se empareja con los dos valores b del modo inicial. Exigir correspondencia
+    // en todos los b descartaría cortes que el cálculo de dos puntos sí usa.
+    const { matched, discardedCount, errors } = matchSlices(diffusion, [bLow, bHigh]);
+
+    // Avisos sobre la procedencia de los valores b: un ADC calculado sobre una b
+    // deducida del nombre de la secuencia no merece la misma confianza que uno
+    // calculado sobre el tag estándar.
+    const sinValorB = cortesDeLaSerie.filter(s => s.metadata.bValueSource === 'ausente').length;
+    const bDeTexto = cortesDeLaSerie.filter(
+      s => s.metadata.bValueSource === 'nombre-secuencia' || s.metadata.bValueSource === 'descripcion'
+    ).length;
+
+    const avisos = [...erroresLectura];
+    if (sinValorB > 0) avisos.push(es.warnBInferred.replace('{n}', String(sinValorB)));
+    if (bDeTexto > 0) avisos.push(es.warnBFromText.replace('{n}', String(bDeTexto)));
+    if (series.length > 1) {
+      avisos.push(
+        es.avisoSerieElegida
+          .replace('{serie}', elegida.descripcion)
+          .replace('{total}', String(series.length))
+      );
+    }
+    
+    let threshold = 0;
+    if (matched.length > 0) {
+      const refSlice = matched[Math.floor(matched.length / 2)].slicesByBValue.get(bLow);
+      if (refSlice) {
+        threshold = estimateNoiseThreshold(refSlice).threshold;
+      }
+    }
+    
+    state = {
+      todosLosCortes,
+      series,
+      serieElegida: elegida.seriesUIDs,
+      diffusionGroups: diffusion,
+      matched,
+      bValues,
+      vendorAdcMaps,
+      threshold,
+      registrationMode: 'translation',
+      bLow,
+      bHigh,
+      bTarget: 2000,
+      useMultiB: false
+    };
+    
+    self.postMessage({
+      type: 'LOADED',
+      payload: {
+        bValues,
+        bLow,
+        bHigh,
+        threshold,
+        discardedCount,
+        errors: [...avisos, ...errors],
+        sliceCount: matched.length,
+        hasVendorAdc: vendorAdcMaps.length > 0,
+        series: series.map(s => ({
+          id: s.seriesUIDs.join('|'),
+          descripcion: s.descripcion,
+          imagenes: s.imagenes,
+          valoresB: s.valoresB,
+          matriz: `${s.filas}×${s.columnas}`,
+          esDifusion: s.esDifusion,
+        })),
+        serieElegida: elegida.seriesUIDs.join('|'),
+        columns: matched.length > 0 ? matched[0].slicesByBValue.get(bLow)!.metadata.columns : 256,
+        rows: matched.length > 0 ? matched[0].slicesByBValue.get(bLow)!.metadata.rows : 256
+      }
+    });
+}
 
 self.onmessage = async (e: MessageEvent) => {
   const { type, payload } = e.data;
@@ -37,7 +152,11 @@ self.onmessage = async (e: MessageEvent) => {
       if (type === 'LOAD_ZIP') {
         const zip = new JSZip();
         const unzipped = await zip.loadAsync(payload.file);
-        const entradas = Object.values(unzipped.files).filter(f => !f.dir);
+        // Un export de PACS trae dentro el visor de escritorio y sus instaladores:
+        // descomprimir cientos de megas para descubrir que no son imágenes es
+        // tiempo y memoria tirados.
+        const entradas = Object.values(unzipped.files)
+          .filter(f => !f.dir && nombrePuedeSerDicom(f.name));
         totalFiles = entradas.length;
         leerArchivo = (i) => entradas[i].async('arraybuffer');
       } else {
@@ -79,77 +198,26 @@ self.onmessage = async (e: MessageEvent) => {
       }
 
       self.postMessage({ type: 'PROGRESS', payload: { step: es.pasoAgrupacion, progress: 1.0 } });
-      
-      const { diffusion, vendorAdc } = groupAndAverageSlices(slices);
 
-      const vendorAdcMaps = Array.from(vendorAdc.values())
-        .sort((a, b) => a.metadata.canonicalPosition - b.metadata.canonicalPosition);
+      // Un estudio exportado del PACS trae todas las secuencias del examen y una
+      // sola de difusión. Hay que quedarse con esa antes de agrupar nada.
+      const series = inventariarSeries(slices);
+      const seriesDifusion = series.filter(s => s.esDifusion);
 
-      const bValues = Array.from(
-        new Set(Array.from(diffusion.values()).map(g => g.metadata.bValue))
-      ).sort((a, b) => a - b);
-
-      // Se prefiere una b de referencia >= 150 s/mm² para anular el sesgo por
-      // microperfusión, pero solo entre las que no son la b más alta: con una serie
-      // de dos valores b —el caso habitual— elegirla sin ese filtro dejaba b baja y
-      // b alta en el mismo valor y el cálculo se detenía con «valores b idénticos».
-      const bHigh = bValues[bValues.length - 1];
-      const candidatasBajas = bValues.filter(b => b < bHigh);
-      const bLow = candidatasBajas.find(b => b >= 150) ?? candidatasBajas[0] ?? bValues[0];
-
-      // Se empareja con los dos valores b del modo inicial. Exigir correspondencia
-      // en todos los b descartaría cortes que el cálculo de dos puntos sí usa.
-      const { matched, discardedCount, errors } = matchSlices(diffusion, [bLow, bHigh]);
-
-      // Avisos sobre la procedencia de los valores b: un ADC calculado sobre una b
-      // deducida del nombre de la secuencia no merece la misma confianza que uno
-      // calculado sobre el tag estándar.
-      const sinValorB = slices.filter(s => s.metadata.bValueSource === 'ausente').length;
-      const bDeTexto = slices.filter(
-        s => s.metadata.bValueSource === 'nombre-secuencia' || s.metadata.bValueSource === 'descripcion'
-      ).length;
-
-      const avisos = [...erroresLectura];
-      if (sinValorB > 0) avisos.push(es.warnBInferred.replace('{n}', String(sinValorB)));
-      if (bDeTexto > 0) avisos.push(es.warnBFromText.replace('{n}', String(bDeTexto)));
-      
-      let threshold = 0;
-      if (matched.length > 0) {
-        const refSlice = matched[Math.floor(matched.length / 2)].slicesByBValue.get(bLow);
-        if (refSlice) {
-          threshold = estimateNoiseThreshold(refSlice).threshold;
-        }
+      if (seriesDifusion.length === 0) {
+        throw new Error(es.errSinDifusion);
       }
-      
-      state = {
-        diffusionGroups: diffusion,
-        matched,
-        bValues,
-        vendorAdcMaps,
-        threshold,
-        registrationMode: 'translation',
-        bLow,
-        bHigh,
-        bTarget: 2000,
-        useMultiB: false
-      };
-      
-      self.postMessage({
-        type: 'LOADED',
-        payload: {
-          bValues,
-          bLow,
-          bHigh,
-          threshold,
-          discardedCount,
-          errors: [...avisos, ...errors],
-          sliceCount: matched.length,
-          hasVendorAdc: vendorAdcMaps.length > 0,
-          columns: matched.length > 0 ? matched[0].slicesByBValue.get(bLow)!.metadata.columns : 256,
-          rows: matched.length > 0 ? matched[0].slicesByBValue.get(bLow)!.metadata.rows : 256
-        }
-      });
-      
+
+      const elegida = seriesDifusion[0];
+
+      prepararSerie(slices, series, elegida, erroresLectura);
+
+    } else if (type === 'SELECT_SERIES') {
+      if (!state) return;
+      const elegida = state.series.find(s => s.seriesUIDs.join('|') === payload.id);
+      if (!elegida) return;
+      prepararSerie(state.todosLosCortes, state.series, elegida, []);
+
     } else if (type === 'COMPUTE') {
       if (!state) return;
       
