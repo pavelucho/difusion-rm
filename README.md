@@ -32,11 +32,41 @@ La aplicación es un sitio estático: `npm run build` deja en `dist/` todo lo ne
 sin backend. Como el procesamiento ocurre en el navegador, no hay datos de paciente en
 tránsito ni almacenados en el servidor, y alojarla es un problema de hosting corriente.
 
-En Cloudflare Pages, Netlify o cualquier servicio equivalente:
+El despliegue completo son 14 archivos y 1,2 MB, muy por debajo de los límites del
+plan gratuito de Cloudflare Pages (20 000 archivos y 25 MiB por archivo, con ancho de
+banda ilimitado y 500 compilaciones al mes). El plan gratuito basta y sobra.
+
+### Publicar desde el equipo
+
+```bash
+npx wrangler login   # abre el navegador y autoriza la sesión
+npm run deploy
+```
+
+La primera ejecución crea el proyecto; las siguientes lo actualizan. Queda publicado en
+`https://difusion-rm.pages.dev`, y desde el panel de Cloudflare se le puede añadir un
+dominio propio sin coste.
+
+Para publicar una versión de prueba sin tocar la de producción: `npm run deploy:preview`.
+
+### Publicar automáticamente desde Git
+
+Si el repositorio está en GitHub o GitLab, en *Workers y Pages → Crear → Pages →
+Conectar a Git*:
 
 - Comando de compilación: `npm ci && npm run build`
-- Directorio publicado: `dist`
-- Versión de Node: 22
+- Directorio de salida: `dist`
+- Variable de entorno: `NODE_VERSION` = `22`
+
+### Sobre credenciales
+
+`wrangler login` autoriza por navegador y guarda la sesión en el equipo. No hace falta
+ningún token de API, y no debe guardarse ninguno en el repositorio. Si en algún momento
+un token llega a compartirse por chat, correo o captura, dese por comprometido y
+revóquese desde *Mi perfil → Tokens de API*.
+
+Con otro proveedor (Netlify o equivalente), la configuración es la misma: compilar con
+`npm ci && npm run build` y publicar `dist` con Node 22.
 
 `public/_headers` y `public/_redirects` ya traen las cabeceras de seguridad —incluida
 una política de contenido que solo permite conexiones al propio origen— y el

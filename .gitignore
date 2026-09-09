@@ -9,3 +9,7 @@ coverage/
 # Estudios DICOM: nunca versionar datos de paciente
 *.dcm
 estudios/
+
+# Credenciales y estado de wrangler: nunca versionar
+.wrangler/
+.dev.vars

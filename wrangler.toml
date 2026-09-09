@@ -1,0 +1,8 @@
+# Configuración de Cloudflare Pages.
+#
+# El despliegue no necesita ningún token en el proyecto: `wrangler login` abre el
+# navegador y autoriza la sesión contra tu cuenta. Nunca pegues un token de API en
+# un archivo del repositorio ni en un chat.
+name = "difusion-rm"
+pages_build_output_dir = "dist"
+compatibility_date = "2026-09-09"

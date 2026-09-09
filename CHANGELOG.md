@@ -4,6 +4,15 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
 
 ## [No publicado]
 
+### Añadido — despliegue
+- Publicación en Cloudflare Pages con `npm run deploy`, autenticando por navegador
+  con `wrangler login`: el proyecto no guarda ni necesita ningún token de API.
+- `wrangler.toml` y script de despliegue de vista previa.
+
+### Cambiado — despliegue
+- Los mapas de origen dejan de generarse en la compilación de producción: publicaban
+  el código fuente completo y triplicaban el peso del despliegue (4,7 MB a 1,2 MB).
+
 ### Corregido — fase 2
 - **La b baja y la b alta salían iguales en series de dos valores b.** La regla de
   preferir una referencia >= 150 s/mm² elegía el único valor alto disponible, y el

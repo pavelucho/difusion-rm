@@ -16,7 +16,9 @@
     "lint": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "check": "npm run lint && npm run test && npm run build"
+    "check": "npm run lint && npm run test && npm run build",
+    "deploy": "npm run build && wrangler pages deploy dist --project-name=difusion-rm",
+    "deploy:preview": "npm run build && wrangler pages deploy dist --project-name=difusion-rm --branch=preview"
   },
   "dependencies": {
     "dcmjs": "^0.52.0",
@@ -37,6 +39,7 @@
     "typescript": "~5.8.2",
     "vite": "^6.2.3",
     "vite-plugin-pwa": "^1.3.0",
-    "vitest": "^4.1.10"
+    "vitest": "^4.1.10",
+    "wrangler": "^4.86.0"
   }
 }

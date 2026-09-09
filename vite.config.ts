@@ -62,6 +62,8 @@ export default defineConfig({
   },
   build: {
     target: 'es2022',
-    sourcemap: true,
+    // Los mapas de origen publicarían el código fuente completo y triplican el
+    // peso del despliegue. Para depurar en local: npm run build -- --sourcemap
+    sourcemap: false,
   },
 });
