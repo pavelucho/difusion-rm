@@ -4,6 +4,7 @@ import { es } from './i18n/es';
 import { RoiShape, RoiState, rasterizeRoi } from './lib/roi';
 import { computeRoiStats, computeContrast, computeLinCCC } from './lib/diffusion/stats';
 import { Panel } from './components/Panel';
+import { Cita } from './components/Cita';
 import { archivosDesdeArrastre, clasificarEntrada } from './lib/entrada-archivos';
 
 type AppState = 'IDLE' | 'LOADING' | 'COMPUTING' | 'READY' | 'EXPORTING' | 'ERROR';
@@ -14,6 +15,7 @@ export default function App() {
   const [progressPct, setProgressPct] = useState(0);
   const [errorMsg, setErrorMsg] = useState('');
   const [arrastrando, setArrastrando] = useState(false);
+  const [citaAbierta, setCitaAbierta] = useState(false);
   
   const workerRef = useRef<Worker | null>(null);
   const [meta, setMeta] = useState<any>(null);
@@ -1421,8 +1423,17 @@ export default function App() {
           <span className="ml-2 opacity-70">
             v{__APP_VERSION__} · {__BUILD_DATE__}
           </span>
+          <button
+            type="button"
+            onClick={() => setCitaAbierta(true)}
+            className="ml-2 underline decoration-dotted underline-offset-2 hover:text-[#F27D26] transition-colors"
+          >
+            {es.citaBoton}
+          </button>
         </div>
       </div>
+
+      {citaAbierta && <Cita onClose={() => setCitaAbierta(false)} />}
     </div>
   );
 }
