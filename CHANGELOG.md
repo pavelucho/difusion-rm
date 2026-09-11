@@ -2,7 +2,7 @@
 
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
 
-## [No publicado]
+## [1.0.0] — 2026-09-11
 
 ### Corregido — estudios completos del PACS
 - **Un estudio exportado entero no se podía procesar.** La aplicación daba por hecho

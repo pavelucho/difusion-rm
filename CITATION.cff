@@ -1,0 +1,29 @@
+cff-version: 1.2.0
+message: "Si utiliza esta herramienta en un trabajo publicado, por favor cítela así."
+type: software
+title: "Procesador de difusión — ADC · eADC · cDWI"
+version: 1.0.0
+date-released: "2026-09-11"
+license: MIT
+repository-code: "https://github.com/pavelucho/difusion-rm"
+url: "https://difusion-rm.pages.dev"
+authors:
+  - family-names: Luna
+    given-names: Pavel
+    orcid: "https://orcid.org/0000-0001-7742-9487"
+abstract: >-
+  Aplicación web para post-procesado de resonancia magnética de difusión.
+  Calcula mapas de coeficiente de difusión aparente (ADC), ADC exponencial
+  (eADC) y DWI computada (cDWI) a partir de una serie DICOM de difusión, y los
+  exporta como serie DICOM con un registro de procesamiento en JSON. Todo el
+  cálculo ocurre en el navegador: las imágenes no se suben a ningún servidor.
+  Herramienta de investigación clínica; no es un dispositivo médico certificado.
+keywords:
+  - resonancia magnética de difusión
+  - diffusion-weighted imaging
+  - ADC
+  - eADC
+  - cDWI
+  - DICOM
+  - post-procesado de imagen médica
+  - research software

@@ -1,0 +1,32 @@
+{
+  "upload_type": "software",
+  "title": "Procesador de difusión — ADC · eADC · cDWI",
+  "version": "1.0.0",
+  "language": "spa",
+  "access_right": "open",
+  "license": "MIT",
+  "creators": [
+    {
+      "name": "Luna, Pavel",
+      "orcid": "0000-0001-7742-9487"
+    }
+  ],
+  "description": "<p>Aplicación web para post-procesado de resonancia magnética de difusión. Calcula mapas de coeficiente de difusión aparente (ADC), ADC exponencial (eADC) y DWI computada (cDWI) a partir de una serie DICOM de difusión, y los exporta como serie DICOM junto con un registro de procesamiento en JSON para trazabilidad.</p><p><strong>Todo el procesamiento ocurre en el navegador.</strong> Las imágenes no se suben a ningún servidor: se leen, se calculan y se exportan en el propio equipo del usuario, de modo que no hay datos de paciente en tránsito ni almacenados. La aplicación acepta el estudio tal como llega del PACS —carpeta, contenido de un CD, ZIP o archivos DICOM sueltos, incluidos los que vienen sin extensión—, inventaría las series, detecta la de difusión y calcula solo sobre ella.</p><p>Se distribuye como aplicación web progresiva (PWA) instalable, que funciona sin conexión una vez cargada. Versión en línea: <a href=\"https://difusion-rm.pages.dev\">https://difusion-rm.pages.dev</a></p><p><strong>Aviso:</strong> herramienta de investigación clínica. No es un dispositivo médico certificado. Los mapas derivados deben interpretarse junto con las imágenes adquiridas originales.</p>",
+  "keywords": [
+    "resonancia magnética de difusión",
+    "diffusion-weighted imaging",
+    "DWI",
+    "ADC",
+    "coeficiente de difusión aparente",
+    "apparent diffusion coefficient",
+    "eADC",
+    "cDWI",
+    "computed DWI",
+    "DICOM",
+    "post-procesado de imagen médica",
+    "medical image processing",
+    "browser-based processing",
+    "research software",
+    "PWA"
+  ]
+}
