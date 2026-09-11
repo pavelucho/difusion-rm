@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Check, Copy, ExternalLink, X } from 'lucide-react';
 import { es } from '../i18n/es';
-import { CITA, citaApa, citaBibtex, urlDoi } from '../lib/cita';
+import { CITA, citaApa, citaBibtex, doiDeVersion, urlDoi } from '../lib/cita';
 
 interface CitaProps {
   onClose: () => void;
@@ -71,6 +71,7 @@ export function Cita({ onClose }: CitaProps) {
   const version = __APP_VERSION__;
   const apa = citaApa(version);
   const bibtex = citaBibtex(version);
+  const doiVersion = doiDeVersion(version);
 
   // showModal() da foco atrapado y pone el diálogo en la capa superior.
   useEffect(() => {
@@ -155,11 +156,15 @@ export function Cita({ onClose }: CitaProps) {
           )}
 
           <div className="flex flex-col gap-3 border-t border-[#3a3028] pt-4">
-            <FilaDoi
-              etiqueta={es.citaDoiVersion}
-              doi={CITA.doiVersion}
-              ayuda={es.citaDoiVersionAyuda}
-            />
+            {doiVersion
+              ? <FilaDoi
+                  etiqueta={es.citaDoiVersion}
+                  doi={doiVersion}
+                  ayuda={es.citaDoiVersionAyuda}
+                />
+              : <p className="text-[11px] text-amber-500 leading-snug">
+                  {es.citaVersionSinArchivar}
+                </p>}
             <FilaDoi
               etiqueta={es.citaDoiConcepto}
               doi={CITA.doiConcepto}

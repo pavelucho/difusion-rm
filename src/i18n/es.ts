@@ -123,6 +123,7 @@ export const es = {
   citaDoiConcepto: "DOI de concepto",
   citaDoiVersionAyuda: "Fija el código exacto que produjo los mapas. Es el que debe ir en la sección de métodos.",
   citaDoiConceptoAyuda: "Resuelve siempre a la última versión publicada. Sirve para referirse a la herramienta en general, no para citar resultados.",
+  citaVersionSinArchivar: "Esta compilación todavía no está archivada en Zenodo, así que se cita el DOI de concepto. Tendrá DOI propio en cuanto se publique su release.",
   citaRepositorio: "Código fuente en GitHub",
   citaCerrar: "Cerrar",
 };

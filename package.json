@@ -1,7 +1,7 @@
 {
   "name": "difusion-rm",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Post-procesado de RM de difusión: mapas ADC, eADC y cDWI calculados íntegramente en el navegador.",
   "license": "MIT",
   "type": "module",

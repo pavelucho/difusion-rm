@@ -2,6 +2,23 @@
 
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
 
+## [1.1.0] — 2026-09-11
+
+### Añadido — cómo citar, dentro de la aplicación
+- El DOI estaba solo en el README, que no ve quien usa la herramienta: entra por la
+  dirección web, calcula sus mapas y se va. Un enlace en el pie abre la referencia en
+  APA y la entrada BibTeX ya formadas y copiables.
+- La versión de la cita sale de la propia compilación, no escrita a mano, y el DOI se
+  busca indexado por versión: si esa versión todavía no está archivada, se cita el de
+  concepto y se avisa. Así la aplicación no puede citar un DOI que corresponde a otro
+  código.
+- Se distinguen los dos DOI con su explicación: citar el de concepto en la sección de
+  métodos rompe la reproducibilidad, porque apunta a lo que se publique después.
+
+### Añadido — archivo citable
+- Publicación en Zenodo con DOI: `.zenodo.json` con la autoría y el ORCID, y
+  `CITATION.cff` para el botón *Cite this repository* de GitHub.
+
 ## [1.0.0] — 2026-09-11
 
 ### Corregido — estudios completos del PACS
