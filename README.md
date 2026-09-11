@@ -1,5 +1,7 @@
 # Procesador de difusión — ADC · eADC · cDWI
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.22714640.svg)](https://doi.org/10.5281/zenodo.22714640)
+
 **En línea: https://difusion-rm.pages.dev**
 
 Aplicación web para post-procesado de resonancia magnética de difusión. Calcula mapas
@@ -198,3 +200,36 @@ para verificar la transfer syntax, el UID de serie y el escalado.
 Cada DICOM derivado lleva en su descripción de derivación (0008,2111) la fórmula
 aplicada, el umbral de enmascarado, el modo de corregistro y la versión de la
 aplicación que lo calculó, que también aparece en el pie de la interfaz.
+
+## Cómo citar
+
+El proyecto está archivado en Zenodo con DOI. Si lo usa en un trabajo publicado:
+
+> Luna, P. (2026). *Procesador de difusión — ADC · eADC · cDWI* (versión 1.0.0)
+> [Software]. Zenodo. https://doi.org/10.5281/zenodo.22714641
+
+```bibtex
+@software{luna_difusion_rm_2026,
+  author    = {Luna, Pavel},
+  title     = {Procesador de difusión — ADC · eADC · cDWI},
+  version   = {1.0.0},
+  year      = {2026},
+  publisher = {Zenodo},
+  doi       = {10.5281/zenodo.22714641},
+  url       = {https://doi.org/10.5281/zenodo.22714641}
+}
+```
+
+Hay dos DOI y no son intercambiables:
+
+| DOI | Resuelve a | Cuándo usarlo |
+| --- | ---------- | ------------- |
+| `10.5281/zenodo.22714640` | Siempre la última versión | Referirse a la herramienta en general |
+| `10.5281/zenodo.22714641` | La versión 1.0.0, para siempre | Citar resultados reproducibles |
+
+Para métodos de un artículo, cite el DOI de versión: fija exactamente el código que
+produjo los mapas. El de concepto apunta a lo que haya publicado más adelante, que no
+es lo que usted ejecutó.
+
+`CITATION.cff` lleva estos mismos datos, y GitHub los ofrece en APA y BibTeX desde
+*Cite this repository*, en la portada del repositorio.

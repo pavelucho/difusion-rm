@@ -5,6 +5,13 @@ title: "Procesador de difusión — ADC · eADC · cDWI"
 version: 1.0.0
 date-released: "2026-09-11"
 license: MIT
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.22714640
+    description: "DOI de concepto — resuelve siempre a la última versión publicada"
+  - type: doi
+    value: 10.5281/zenodo.22714641
+    description: "DOI de la versión 1.0.0"
 repository-code: "https://github.com/pavelucho/difusion-rm"
 url: "https://difusion-rm.pages.dev"
 authors:
