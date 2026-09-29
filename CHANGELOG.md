@@ -2,7 +2,7 @@
 
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
 
-## [Sin publicar]
+## [1.3.0] — 2026-09-29
 
 ### Corregido — comparación con el ADC del equipo
 Al pasar el motor de la aplicación por los estudios reales guardados en Horos, simulando
