@@ -72,8 +72,11 @@ function prepararSerie(
     // Avisos sobre la procedencia de los valores b: un ADC calculado sobre una b
     // deducida del nombre de la secuencia no merece la misma confianza que uno
     // calculado sobre el tag estándar.
-    const sinValorB = cortesDeLaSerie.filter(s => s.metadata.bValueSource === 'ausente').length;
-    const bDeTexto = cortesDeLaSerie.filter(
+    // Los mapas de ADC del equipo no llevan valor b y no entran en el cálculo:
+    // contarlos daba un aviso de «valor b ilegible» en todo estudio que los trae.
+    const imagenesDifusion = cortesDeLaSerie.filter(s => !s.metadata.isVendorADC);
+    const sinValorB = imagenesDifusion.filter(s => s.metadata.bValueSource === 'ausente').length;
+    const bDeTexto = imagenesDifusion.filter(
       s => s.metadata.bValueSource === 'nombre-secuencia' || s.metadata.bValueSource === 'descripcion'
     ).length;
 

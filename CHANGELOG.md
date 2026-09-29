@@ -2,6 +2,31 @@
 
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
 
+## [Sin publicar]
+
+### Corregido
+- **Pulsar la pestaña Validación dejaba la aplicación en blanco** y se perdía el
+  trabajo: la pestaña declaraba un hook de React solo mientras estaba abierta. Pasaba
+  con todo estudio que trae el ADC del equipo, que es cuando esa pestaña aparece.
+- **El porcentaje de vóxeles enmascarados de la tabla de ROI se quedaba corto**: una ROI
+  con el 99 % de sus vóxeles excluidos mostraba un 50 %. Una ROI sin ningún vóxel válido
+  daba media 0 en lugar de *No hay vóxeles válidos*, y así podía entrar en las tablas de
+  contraste y de validación.
+- Las presintonías de ventana del ADC (0-2000, 0-3000, 0-4000) quedaban debajo del
+  selector de mapa del panel y no se podían pulsar.
+- Tras cambiar de serie o abrir otro estudio, los controles seguían mostrando la b
+  objetivo, el multi-b y el corregistro anteriores, aunque el cálculo se había hecho con
+  los valores por defecto; y si el estudio nuevo tenía menos cortes que el que se estaba
+  viendo, la aplicación se quedaba en blanco. Ahora los controles muestran lo calculado,
+  la vista vuelve al primer corte y, al abrir otro estudio, se borran las ROI del
+  anterior. Los pares de validación se conservan: acumularlos entre pacientes es su uso.
+- Los mapas ADC del equipo, que no llevan valor b, disparaban el aviso «No se pudo leer
+  el valor b» en todo estudio que los incluye.
+- El registro de procesamiento declaraba siempre la versión «1.0»; ahora lleva la de la
+  compilación.
+- La ayuda de la pestaña Fidelidad no advertía que, con el ajuste de dos puntos, la DWI
+  calculada coincide siempre con la adquirida por construcción.
+
 ## [1.1.0] — 2026-09-11
 
 ### Añadido — cómo citar, dentro de la aplicación

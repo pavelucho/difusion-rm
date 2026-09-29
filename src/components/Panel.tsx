@@ -284,8 +284,9 @@ export function Panel({
         )}
       </div>
       
+      {/* Debajo del selector de mapa, que ocupa la esquina y las tapaba. */}
       {(mapType === 'ADC' || mapType === 'VENDOR-ADC') && (
-        <div className="absolute top-0 right-0 flex gap-1 p-1 z-10 pointer-events-auto">
+        <div className="absolute top-6 right-0 flex gap-1 p-1 z-10 pointer-events-auto">
           <button onClick={() => onWindowChange(1000/1e6, 2000/1e6, true)} className="bg-black/60 hover:bg-[#F27D26] text-gray-300 hover:text-white text-[10px] px-1.5 py-0.5 rounded cursor-pointer transition-colors" title={es.presetProstate}>0-2000</button>
           <button onClick={() => onWindowChange(1500/1e6, 3000/1e6, true)} className="bg-black/60 hover:bg-[#F27D26] text-gray-300 hover:text-white text-[10px] px-1.5 py-0.5 rounded cursor-pointer transition-colors" title={es.presetGeneral}>0-3000</button>
           <button onClick={() => onWindowChange(2000/1e6, 4000/1e6, true)} className="bg-black/60 hover:bg-[#F27D26] text-gray-300 hover:text-white text-[10px] px-1.5 py-0.5 rounded cursor-pointer transition-colors" title={es.presetFluid}>0-4000</button>
