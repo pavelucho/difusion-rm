@@ -2,8 +2,8 @@ cff-version: 1.2.0
 message: "Si utiliza esta herramienta en un trabajo publicado, por favor cítela así."
 type: software
 title: "Procesador de difusión — ADC · eADC · cDWI"
-version: 1.1.0
-date-released: "2026-09-11"
+version: 1.2.0
+date-released: "2026-09-28"
 license: MIT
 identifiers:
   - type: doi
