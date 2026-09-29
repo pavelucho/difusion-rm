@@ -33,7 +33,7 @@ export const es = {
   fidelityPoor: "Fidelidad baja — no interprete la cDWI extrapolada",
   fidelityError: "Error absoluto medio",
   fidelityCorr: "Correlación",
-  fidelityHelp: "Con el b objetivo igual a la b alta adquirida, la cDWI debe reproducir la imagen adquirida. Una discrepancia grande indica un problema en el modelo, el corregistro o la lectura de los valores b.",
+  fidelityHelp: "Con el b objetivo igual a la b alta adquirida, la cDWI debe reproducir la imagen adquirida. Una discrepancia grande indica un problema en el modelo, el corregistro o la lectura de los valores b. En el ajuste de dos puntos coinciden siempre por construcción: la comprobación informa con el ajuste multi-b.",
   panelAcquiredHigh: "b alta adquirida",
   panelDifference: "Diferencia (calculada − adquirida)",
   noiseThreshold: "Umbral de ruido",

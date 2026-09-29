@@ -52,7 +52,11 @@ export default function App() {
   const [contrastRows, setContrastRows] = useState<any[]>([]);
 
   const [validationPairs, setValidationPairs] = useState<any[]>([]);
-  
+  // Vive aquí y no dentro de la pestaña: un hook declarado solo cuando la pestaña
+  // está abierta cambia el número de hooks entre renders, y React desmonta la
+  // aplicación entera al pulsar «Validación».
+  const [validationRoiId, setValidationRoiId] = useState<string>('');
+
   // Track active panel to show stats for
   const [activePanelIndex, setActivePanelIndex] = useState(0);
   
@@ -83,7 +87,19 @@ export default function App() {
         setBLow(payload.bLow);
         setBHigh(payload.bHigh);
         setThreshold(payload.threshold);
-        
+        // El primer cálculo usa los valores por defecto de abajo, así que los
+        // controles vuelven a ellos: si no, tras cambiar de serie o de estudio
+        // mostraban la b objetivo o el multi-b anteriores, que no eran los
+        // calculados. El corte vuelve al primero porque el anterior puede no
+        // existir en la serie nueva, y las ventanas y filas de contraste fijadas
+        // pertenecían a otras imágenes.
+        setBTarget(2000);
+        setUseMultiB(false);
+        setRegistrationMode('translation');
+        setCurrentSlice(0);
+        setContrastRows([]);
+        setWindowStates(prev => prev.map(w => ({ ...w, userAdjusted: false })));
+
         // Trigger initial compute
         workerRef.current?.postMessage({
           type: 'COMPUTE',
@@ -225,6 +241,11 @@ export default function App() {
 
     setAppState('LOADING');
     setErrorMsg('');
+    // Las ROI se dibujaron sobre el estudio anterior. Los pares de validación sí
+    // se conservan: acumularlos entre pacientes es para lo que sirve esa tabla.
+    setRois([]);
+    setDraftRoi(null);
+    setActiveTool(null);
 
     if (entrada.tipo === 'zip') {
       workerRef.current?.postMessage({ type: 'LOAD_ZIP', payload: { file: entrada.zip } });
@@ -633,7 +654,9 @@ export default function App() {
                             </thead>
                             <tbody>
                               {roiStatsList.map(({ roi, stats }) => {
-                                if (!stats || stats.n === 0) return (
+                                // stats.n cuenta todos los vóxeles de la ROI, también los
+                                // enmascarados: sin ninguno válido, la media no existe.
+                                if (!stats || stats.n === stats.masked) return (
                                   <tr key={roi.id} className="border-b border-[#3a3028]/50">
                                     <td className="py-1 pr-2 text-gray-300 flex items-center gap-1">
                                       <div className="w-2 h-2 rounded-full" style={{ backgroundColor: roi.color }} />
@@ -652,7 +675,7 @@ export default function App() {
                                       {roi.label}
                                     </td>
                                     <td className="pr-2">{stats.n}</td>
-                                    <td className="pr-2 text-gray-500">{stats.masked} ({((stats.masked / (stats.n + stats.masked)) * 100).toFixed(0)}%)</td>
+                                    <td className="pr-2 text-gray-500">{stats.masked} ({stats.maskedPercentage.toFixed(0)}%)</td>
                                     {isADC ? (
                                       <>
                                         <td className="pr-2 text-[#F27D26]">{(stats.mean * 1e3).toLocaleString('es-PE', { minimumFractionDigits: 3, maximumFractionDigits: 3 })}</td>
@@ -694,7 +717,8 @@ export default function App() {
                       const stL = computeRoiStats({ pixels, validityMask: res.maps.mask, roiMask: lesionMask });
                       const stR = computeRoiStats({ pixels, validityMask: res.maps.mask, roiMask: refMask });
                       const stB = computeRoiStats({ pixels, validityMask: res.maps.mask, roiMask: bgMask });
-                      if (stL.n === 0 || stR.n === 0 || stB.n === 0 || stB.std === 0 || stR.mean === 0) return null;
+                      const sinValidos = (s: { n: number; masked: number }) => s.n === s.masked;
+                      if (sinValidos(stL) || sinValidos(stR) || sinValidos(stB) || stB.std === 0 || stR.mean === 0) return null;
                       const { cr, cnr } = computeContrast(stL.mean, stR.mean, stB.std);
                       return { name, cr, cnr, stL, stR, stB };
                     };
@@ -799,7 +823,6 @@ export default function App() {
                 
                 {activeTab === 'VALIDATION' && (() => {
                   const allRois = rois.filter(r => r.sliceIndex === currentSlice);
-                  const [selectedRoiId, setSelectedRoiId] = useState<string>('');
 
                   let cccResult = null;
                   if (validationPairs.length > 1) {
@@ -809,7 +832,7 @@ export default function App() {
                   }
 
                   const handleAddPair = () => {
-                    const roi = rois.find(r => r.id === selectedRoiId);
+                    const roi = rois.find(r => r.id === validationRoiId);
                     const res = results[currentSlice];
                     if (!roi || !res || !meta || !meta.hasVendorAdc) return;
                     
@@ -817,7 +840,7 @@ export default function App() {
                     const calcStats = computeRoiStats({ pixels: res.maps.adc, validityMask: res.maps.mask, roiMask });
                     const vendStats = computeRoiStats({ pixels: vendorAdcData[currentSlice], validityMask: res.maps.mask, roiMask });
                     
-                    if (calcStats.n > 0 && vendStats.n > 0) {
+                    if (calcStats.n > calcStats.masked && vendStats.n > vendStats.masked) {
                       setValidationPairs([...validationPairs, {
                         id: Math.random().toString(36).substring(2, 9),
                         studyId: meta.patientName || 'Anon',
@@ -839,7 +862,7 @@ export default function App() {
                       <div className="flex gap-2 items-end">
                         <div className="flex flex-col gap-1 flex-1">
                           <label className="text-[10px] text-gray-400">ROI para validar</label>
-                          <select className="bg-[#1A1614] border border-[#3a3028] text-xs p-1 rounded text-white" value={selectedRoiId} onChange={e => setSelectedRoiId(e.target.value)}>
+                          <select className="bg-[#1A1614] border border-[#3a3028] text-xs p-1 rounded text-white" value={validationRoiId} onChange={e => setValidationRoiId(e.target.value)}>
                             <option value="">-- Seleccionar --</option>
                             {allRois.map(r => <option key={r.id} value={r.id}>{r.label}</option>)}
                           </select>
@@ -847,7 +870,7 @@ export default function App() {
                         <button 
                           className="bg-[#3a3028] hover:bg-[#4a3f35] text-xs py-1 px-2 rounded text-gray-200 disabled:opacity-50"
                           onClick={handleAddPair}
-                          disabled={!selectedRoiId}
+                          disabled={!validationRoiId}
                         >
                           {es.validationAddPair}
                         </button>
@@ -1111,7 +1134,7 @@ export default function App() {
                   onClick={() => {
                     const log = {
                       timestamp: new Date().toISOString(),
-                      toolVersion: "1.0",
+                      toolVersion: __APP_VERSION__,
                       detectedBValues: meta.bValues,
                       selectedBLow: bLow,
                       selectedBHigh: bHigh,
