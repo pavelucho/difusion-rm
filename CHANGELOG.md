@@ -2,7 +2,7 @@
 
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
 
-## [Sin publicar]
+## [1.2.0] — 2026-09-28
 
 ### Añadido — manual de uso
 - Manual de uso completo en la propia aplicación, en `/manual`: cómo abrir un estudio,
