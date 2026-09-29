@@ -230,27 +230,31 @@ aplicación que lo calculó, que también aparece en el pie de la interfaz.
 
 El proyecto está archivado en Zenodo con DOI. Si lo usa en un trabajo publicado:
 
-> Luna, P. (2026). *Procesador de difusión — ADC · eADC · cDWI* (versión 1.0.0)
-> [Software]. Zenodo. https://doi.org/10.5281/zenodo.22714641
+> Luna, P. (2026). *Procesador de difusión — ADC · eADC · cDWI* (versión 1.3.0)
+> [Software]. Zenodo. https://doi.org/10.5281/zenodo.23040077
 
 ```bibtex
 @software{luna_difusion_rm_2026,
   author    = {Luna, Pavel},
   title     = {Procesador de difusión — ADC · eADC · cDWI},
-  version   = {1.0.0},
+  version   = {1.3.0},
   year      = {2026},
   publisher = {Zenodo},
-  doi       = {10.5281/zenodo.22714641},
-  url       = {https://doi.org/10.5281/zenodo.22714641}
+  doi       = {10.5281/zenodo.23040077},
+  url       = {https://doi.org/10.5281/zenodo.23040077}
 }
 ```
 
-Hay dos DOI y no son intercambiables:
+Hay dos clases de DOI y no son intercambiables:
 
 | DOI | Resuelve a | Cuándo usarlo |
 | --- | ---------- | ------------- |
 | `10.5281/zenodo.22714640` | Siempre la última versión | Referirse a la herramienta en general |
-| `10.5281/zenodo.22714641` | La versión 1.0.0, para siempre | Citar resultados reproducibles |
+| `10.5281/zenodo.23040077` | La versión 1.3.0, para siempre | Citar resultados reproducibles |
+| `10.5281/zenodo.22714641` | La versión 1.0.0, para siempre | Citar resultados obtenidos con esa versión |
+
+Las versiones 1.1.0 y 1.2.0 no tienen DOI propio: si calculó con ellas, cite el DOI de
+concepto e indique la versión.
 
 Para métodos de un artículo, cite el DOI de versión: fija exactamente el código que
 produjo los mapas. El de concepto apunta a lo que haya publicado más adelante, que no

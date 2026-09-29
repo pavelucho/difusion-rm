@@ -22,6 +22,7 @@ export const CITA = {
 
 const DOI_POR_VERSION: Record<string, string> = {
   '1.0.0': '10.5281/zenodo.22714641',
+  '1.3.0': '10.5281/zenodo.23040077',
 };
 
 export const urlDoi = (doi: string) => `https://doi.org/${doi}`;
