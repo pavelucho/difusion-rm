@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { Download, Loader2, Save, Upload } from 'lucide-react';
+import { BookOpen, Download, Loader2, Quote, Save, Upload } from 'lucide-react';
 import { es } from './i18n/es';
 import { RoiShape, RoiState, rasterizeRoi } from './lib/roi';
 import { computeRoiStats, computeContrast, computeLinCCC } from './lib/diffusion/stats';
@@ -8,6 +8,19 @@ import { Cita } from './components/Cita';
 import { archivosDesdeArrastre, clasificarEntrada } from './lib/entrada-archivos';
 
 type AppState = 'IDLE' | 'LOADING' | 'COMPUTING' | 'READY' | 'EXPORTING' | 'ERROR';
+
+// El manual se abre en otra pestaña, siempre la misma, para poder leerlo mientras
+// se trabaja sin perder el estudio abierto.
+const URL_MANUAL = '/manual';
+const VENTANA_MANUAL = 'manual-difusion';
+
+// Manual y cita: botones con icono y borde, iguales en todos los sitios. Como texto
+// pequeño junto al aviso legal pasaban desapercibidos.
+const CLASE_BOTON_AYUDA =
+  'inline-flex items-center justify-center gap-1.5 rounded border border-[#4a3f35] ' +
+  'bg-[#1A1614] px-3 py-1.5 text-xs font-semibold text-gray-100 whitespace-nowrap ' +
+  'hover:border-[#F27D26] hover:text-[#F27D26] transition-colors ' +
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F27D26]';
 
 export default function App() {
   const [appState, setAppState] = useState<AppState>('IDLE');
@@ -313,7 +326,11 @@ export default function App() {
             <input type="file" multiple className="sr-only" onChange={handleFileUpload} />
           </label>
           <p className="text-xs text-center">{es.uploadHint}</p>
-          
+          <a href={URL_MANUAL} target={VENTANA_MANUAL} className={`${CLASE_BOTON_AYUDA} w-full`}>
+            <BookOpen size={15} aria-hidden="true" className="text-[#F27D26]" />
+            {es.manualEnlace}
+          </a>
+
           {appState === 'LOADING' || appState === 'COMPUTING' ? (
             <div className="flex flex-col items-center p-4">
               <Loader2 className="animate-spin text-[#F27D26] mb-2" size={32} />
@@ -1396,6 +1413,17 @@ export default function App() {
                     </li>
                   ))}
                 </ol>
+                <p className="text-sm">
+                  {es.manualBienvenidaPregunta}{' '}
+                  <a
+                    href={URL_MANUAL}
+                    target={VENTANA_MANUAL}
+                    className="inline-flex items-center gap-1 text-[#F27D26] underline underline-offset-2 hover:text-[#ff9a4d]"
+                  >
+                    <BookOpen size={14} aria-hidden="true" />
+                    {es.manualBienvenidaEnlace}
+                  </a>
+                </p>
                 <p className="text-xs text-gray-500 border-t border-[#3a3028] pt-4 w-full">
                   {es.bienvenidaPrivacidad}
                 </p>
@@ -1441,18 +1469,23 @@ export default function App() {
           <div className="text-amber-500 text-[10px] flex-1 leading-tight">{es.warnHighTargetB}</div>
         )}
 
-        <div className="text-[10px] text-gray-500 max-w-sm text-right ml-auto">
-          {es.disclaimer}
-          <span className="ml-2 opacity-70">
-            v{__APP_VERSION__} · {__BUILD_DATE__}
-          </span>
-          <button
-            type="button"
-            onClick={() => setCitaAbierta(true)}
-            className="ml-2 underline decoration-dotted underline-offset-2 hover:text-[#F27D26] transition-colors"
-          >
-            {es.citaBoton}
-          </button>
+        <div className="ml-auto flex items-center gap-4 min-w-0">
+          <p className="text-[10px] text-gray-500 max-w-sm text-right leading-snug">
+            {es.disclaimer}
+            <span className="ml-2 opacity-70 whitespace-nowrap">
+              v{__APP_VERSION__} · {__BUILD_DATE__}
+            </span>
+          </p>
+          <div className="flex items-center gap-2 shrink-0">
+            <a href={URL_MANUAL} target={VENTANA_MANUAL} className={CLASE_BOTON_AYUDA}>
+              <BookOpen size={15} aria-hidden="true" className="text-[#F27D26]" />
+              {es.manualEnlace}
+            </a>
+            <button type="button" onClick={() => setCitaAbierta(true)} className={CLASE_BOTON_AYUDA}>
+              <Quote size={15} aria-hidden="true" className="text-[#F27D26]" />
+              {es.citaBoton}
+            </button>
+          </div>
         </div>
       </div>
 

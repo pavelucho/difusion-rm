@@ -4,6 +4,27 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
 
 ## [Sin publicar]
 
+### Añadido — manual de uso
+- Manual de uso completo en la propia aplicación, en `/manual`: cómo abrir un estudio,
+  qué hace cada parámetro, cómo leer y medir los mapas, cómo exportarlos y qué
+  significa cada aviso, con un esquema numerado de la pantalla, solución de problemas,
+  glosario y fórmulas. Quien usa la herramienta entra por la dirección web y no ve el
+  README, igual que pasaba con la cita.
+- Se abre desde la barra lateral, la pantalla de bienvenida y la barra inferior, en otra
+  pestaña para consultarlo sin perder el estudio abierto, y funciona sin conexión como
+  el resto de la aplicación.
+- Se escribe en Markdown (`docs/manual-usuario.md`), que es también lo que se lee en
+  GitHub, y se convierte a HTML al compilar: el navegador no carga ningún intérprete de
+  Markdown. Una prueba comprueba que cada enlace interno lleva a un título que existe y
+  que cada imagen está en su sitio.
+- Versión para imprimir o guardar en PDF: portada con índice y versión, páginas
+  numeradas en Chrome y Edge, y las direcciones de los enlaces escritas en el papel.
+
+### Cambiado
+- *Manual de uso* y *Cómo citar* son ahora botones con icono y borde, siempre a la vista
+  en la barra inferior. *Cómo citar* era un texto pequeño junto al aviso legal y pasaba
+  desapercibido. En la barra lateral, *Manual de uso* también es un botón.
+
 ### Corregido
 - **Pulsar la pestaña Validación dejaba la aplicación en blanco** y se perdía el
   trabajo: la pestaña declaraba un hook de React solo mientras estaba abierta. Pasaba

@@ -1,12 +1,43 @@
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
-import { defineConfig } from 'vite';
+import { defineConfig, type Plugin } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 import { readFileSync } from 'fs';
+import { convertirManual, marcadorImagen } from './src/manual/markdown';
 
 const { version } = JSON.parse(readFileSync('./package.json', 'utf-8'));
 const fechaCompilacion = new Date().toISOString().slice(0, 10);
+
+/**
+ * Importar un .md da su HTML y su índice, convertidos al compilar. Las imágenes
+ * con ruta relativa pasan a ser importaciones, así que Vite las procesa como a
+ * cualquier otro recurso y el HTML lleva su URL definitiva.
+ */
+function markdownComoHtml(): Plugin {
+  return {
+    name: 'markdown-como-html',
+    transform(fuente, id) {
+      if (!id.endsWith('.md')) return null;
+      const { html, indice, imagenes } = convertirManual(fuente);
+      const importaciones = imagenes.map((ruta, i) =>
+        `import imagen${i} from ${JSON.stringify(ruta.startsWith('.') ? ruta : `./${ruta}`)};`
+      );
+      const conImagenes = imagenes.reduce(
+        (expresion, _, i) => `${expresion}.replaceAll(${JSON.stringify(marcadorImagen(i))}, imagen${i})`,
+        JSON.stringify(html)
+      );
+      return {
+        code: [
+          ...importaciones,
+          `export const html = ${conImagenes};`,
+          `export const indice = ${JSON.stringify(indice)};`,
+        ].join('\n'),
+        map: null,
+      };
+    },
+  };
+}
 
 export default defineConfig({
   // Versión y fecha viajan hasta la interfaz y hasta el DICOM derivado: un mapa
@@ -16,6 +47,7 @@ export default defineConfig({
     __BUILD_DATE__: JSON.stringify(fechaCompilacion),
   },
   plugins: [
+    markdownComoHtml(),
     react(),
     tailwindcss(),
     VitePWA({
@@ -46,7 +78,8 @@ export default defineConfig({
         // El Web Worker de cálculo ronda el megabyte y tiene que estar en caché
         // para que la aplicación siga funcionando sin conexión.
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
-        globPatterns: ['**/*.{js,css,html,png,woff2}'],
+        // svg: las figuras del manual, que también tiene que abrir sin conexión.
+        globPatterns: ['**/*.{js,css,html,png,svg,woff2}'],
         cleanupOutdatedCaches: true,
         navigateFallback: 'index.html',
       },
