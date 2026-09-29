@@ -1,18 +1,16 @@
 import JSZip from 'jszip';
 import { parseDicom } from './dicom-reader';
 import {
-  filtrarPorSerie,
-  groupAndAverageSlices,
   inventariarSeries,
-  matchSlices,
+  serieInicial,
   type MatchedSlice,
   type SerieDetectada,
 } from './series-builder';
+import { calcularMapas, prepararConjunto, type AdcEquipoPreparado } from './estudio';
+import { emparejarAdcEquipo } from './adc-equipo';
 import { nombrePuedeSerDicom } from '../entrada-archivos';
-import { estimateNoiseThreshold, computeTwoPointMaps, computeMultiBMaps } from './maps';
-import { registerSlice } from './registration';
 import { createDerivedDicom, exportZip } from './dicom-writer';
-import type { DicomSlice, AveragedSlice, MapResult } from './types';
+import type { DicomSlice, AveragedSlice } from './types';
 import { DicomNoSoportadoError } from './pixel-data';
 import { es } from '../../i18n/es';
 
@@ -26,7 +24,8 @@ let state: {
   diffusionGroups: Map<string, AveragedSlice>;
   matched: MatchedSlice[];
   bValues: number[];
-  vendorAdcMaps: AveragedSlice[];
+  /** ADC del equipo de la misma adquisición, en mm²/s; se empareja por posición. */
+  adcEquipo?: AdcEquipoPreparado;
   threshold: number;
   registrationMode: "none" | "translation" | "rigid";
   bLow: number;
@@ -46,99 +45,62 @@ function prepararSerie(
   elegida: SerieDetectada,
   erroresLectura: string[]
 ): void {
-  const cortesDeLaSerie = filtrarPorSerie(todosLosCortes, elegida.seriesUIDs);
+  // El desplegable no deja elegir lo que no es difusión, pero el cálculo no debe
+  // depender de eso: una T1 o un eADC no son una serie de difusión.
+  if (!elegida.esDifusion) throw new Error(es.errSerieNoDifusion);
 
-    const { diffusion, vendorAdc } = groupAndAverageSlices(cortesDeLaSerie);
+  const {
+    diffusion, bValues, bLow, bHigh, multiB, matched, discardedCount, errors, avisos, threshold, adcEquipo,
+  } = prepararConjunto(todosLosCortes, series, elegida);
 
-    const vendorAdcMaps = Array.from(vendorAdc.values())
-      .sort((a, b) => a.metadata.canonicalPosition - b.metadata.canonicalPosition);
+  state = {
+    todosLosCortes,
+    series,
+    serieElegida: elegida.seriesUIDs,
+    diffusionGroups: diffusion,
+    matched,
+    bValues,
+    adcEquipo,
+    threshold,
+    registrationMode: 'translation',
+    bLow,
+    bHigh,
+    bTarget: 2000,
+    useMultiB: multiB
+  };
 
-    const bValues = Array.from(
-      new Set(Array.from(diffusion.values()).map(g => g.metadata.bValue))
-    ).sort((a, b) => a - b);
-
-    // Se prefiere una b de referencia >= 150 s/mm² para anular el sesgo por
-    // microperfusión, pero solo entre las que no son la b más alta: con una serie
-    // de dos valores b —el caso habitual— elegirla sin ese filtro dejaba b baja y
-    // b alta en el mismo valor y el cálculo se detenía con «valores b idénticos».
-    const bHigh = bValues[bValues.length - 1];
-    const candidatasBajas = bValues.filter(b => b < bHigh);
-    const bLow = candidatasBajas.find(b => b >= 150) ?? candidatasBajas[0] ?? bValues[0];
-
-    // Se empareja con los dos valores b del modo inicial. Exigir correspondencia
-    // en todos los b descartaría cortes que el cálculo de dos puntos sí usa.
-    const { matched, discardedCount, errors } = matchSlices(diffusion, [bLow, bHigh]);
-
-    // Avisos sobre la procedencia de los valores b: un ADC calculado sobre una b
-    // deducida del nombre de la secuencia no merece la misma confianza que uno
-    // calculado sobre el tag estándar.
-    // Los mapas de ADC del equipo no llevan valor b y no entran en el cálculo:
-    // contarlos daba un aviso de «valor b ilegible» en todo estudio que los trae.
-    const imagenesDifusion = cortesDeLaSerie.filter(s => !s.metadata.isVendorADC);
-    const sinValorB = imagenesDifusion.filter(s => s.metadata.bValueSource === 'ausente').length;
-    const bDeTexto = imagenesDifusion.filter(
-      s => s.metadata.bValueSource === 'nombre-secuencia' || s.metadata.bValueSource === 'descripcion'
-    ).length;
-
-    const avisos = [...erroresLectura];
-    if (sinValorB > 0) avisos.push(es.warnBInferred.replace('{n}', String(sinValorB)));
-    if (bDeTexto > 0) avisos.push(es.warnBFromText.replace('{n}', String(bDeTexto)));
-    if (series.length > 1) {
-      avisos.push(
-        es.avisoSerieElegida
-          .replace('{serie}', elegida.descripcion)
-          .replace('{total}', String(series.length))
-      );
-    }
-    
-    let threshold = 0;
-    if (matched.length > 0) {
-      const refSlice = matched[Math.floor(matched.length / 2)].slicesByBValue.get(bLow);
-      if (refSlice) {
-        threshold = estimateNoiseThreshold(refSlice).threshold;
-      }
-    }
-    
-    state = {
-      todosLosCortes,
-      series,
-      serieElegida: elegida.seriesUIDs,
-      diffusionGroups: diffusion,
-      matched,
+  self.postMessage({
+    type: 'LOADED',
+    payload: {
       bValues,
-      vendorAdcMaps,
-      threshold,
-      registrationMode: 'translation',
       bLow,
       bHigh,
-      bTarget: 2000,
-      useMultiB: false
-    };
-    
-    self.postMessage({
-      type: 'LOADED',
-      payload: {
-        bValues,
-        bLow,
-        bHigh,
-        threshold,
-        discardedCount,
-        errors: [...avisos, ...errors],
-        sliceCount: matched.length,
-        hasVendorAdc: vendorAdcMaps.length > 0,
-        series: series.map(s => ({
-          id: s.seriesUIDs.join('|'),
-          descripcion: s.descripcion,
-          imagenes: s.imagenes,
-          valoresB: s.valoresB,
-          matriz: `${s.filas}×${s.columnas}`,
-          esDifusion: s.esDifusion,
-        })),
-        serieElegida: elegida.seriesUIDs.join('|'),
-        columns: matched.length > 0 ? matched[0].slicesByBValue.get(bLow)!.metadata.columns : 256,
-        rows: matched.length > 0 ? matched[0].slicesByBValue.get(bLow)!.metadata.rows : 256
-      }
-    });
+      useMultiB: multiB,
+      threshold,
+      discardedCount,
+      errors: [...erroresLectura, ...avisos, ...errors],
+      sliceCount: matched.length,
+      hasVendorAdc: Boolean(adcEquipo && adcEquipo.cortes.length > 0),
+      adcEquipo: adcEquipo && {
+        descripcion: adcEquipo.descripcion,
+        unidad: adcEquipo.unidad.etiqueta,
+        origenUnidad: adcEquipo.unidad.origen,
+      },
+      series: series.map(s => ({
+        id: s.seriesUIDs.join('|'),
+        descripcion: s.descripcion,
+        imagenes: s.imagenes,
+        valoresB: s.valoresB,
+        matriz: `${s.filas}×${s.columnas}`,
+        esDifusion: s.esDifusion,
+        excluida: s.excluida,
+        conAdc: Boolean(s.adcEquipo),
+      })),
+      serieElegida: elegida.seriesUIDs.join('|'),
+      columns: matched.length > 0 ? matched[0].slicesByBValue.get(bLow)!.metadata.columns : 256,
+      rows: matched.length > 0 ? matched[0].slicesByBValue.get(bLow)!.metadata.rows : 256
+    }
+  });
 }
 
 self.onmessage = async (e: MessageEvent) => {
@@ -205,13 +167,11 @@ self.onmessage = async (e: MessageEvent) => {
       // Un estudio exportado del PACS trae todas las secuencias del examen y una
       // sola de difusión. Hay que quedarse con esa antes de agrupar nada.
       const series = inventariarSeries(slices);
-      const seriesDifusion = series.filter(s => s.esDifusion);
+      const elegida = serieInicial(series);
 
-      if (seriesDifusion.length === 0) {
+      if (!elegida) {
         throw new Error(es.errSinDifusion);
       }
-
-      const elegida = seriesDifusion[0];
 
       prepararSerie(slices, series, elegida, erroresLectura);
 
@@ -232,66 +192,36 @@ self.onmessage = async (e: MessageEvent) => {
       state.useMultiB = useMultiB;
       state.registrationMode = registrationMode || 'translation';
 
-      // El emparejamiento depende del modo: el ajuste de dos puntos solo necesita
-      // las dos series elegidas, el multi-b las necesita todas.
-      const bParaEmparejar = useMultiB ? state.bValues : [bLow, bHigh];
-      const emparejado = matchSlices(state.diffusionGroups, bParaEmparejar);
-      state.matched = emparejado.matched;
-      
-      const results: { sliceIndex: number; maps: MapResult; registeredSlices: Record<number, Float32Array>; transforms: Record<number, any> }[] = [];
-      const totalSlices = state.matched.length;
-      
-      for (let i = 0; i < totalSlices; i++) {
-        const match = state.matched[i];
-        
-        let refSlice = match.slicesByBValue.get(bLow)!;
-        let slicesToUse: AveragedSlice[] = [];
-        let bValuesToUse: number[] = [];
-        let registeredSlices: Record<number, Float32Array> = {};
-        let transforms: Record<number, any> = {};
-        
-        registeredSlices[bLow] = refSlice.pixelData;
-        
-        if (useMultiB) {
-          bValuesToUse = state.bValues;
-          for (const b of state.bValues) {
-            let slice = match.slicesByBValue.get(b)!;
-            if (b !== bLow) {
-              const regResult = registerSlice(refSlice, slice, state.registrationMode);
-              slice = regResult.registeredSlice;
-              transforms[b] = { dx: regResult.dx, dy: regResult.dy, angle: regResult.angle, fallbackMode: regResult.fallbackMode };
-            }
-            slicesToUse.push(slice);
-            registeredSlices[b] = slice.pixelData;
+      const emparejado = calcularMapas(
+        state.diffusionGroups,
+        state.bValues,
+        { bLow, bHigh, bTarget, threshold, useMultiB, registrationMode: state.registrationMode },
+        (i, total) => {
+          if (i % 5 === 0 || i === total - 1) {
+            self.postMessage({ type: 'PROGRESS', payload: { step: es.pasoCalculo, progress: (i + 1) / total } });
           }
-        } else {
-          let highSlice = match.slicesByBValue.get(bHigh)!;
-          const regResult = registerSlice(refSlice, highSlice, state.registrationMode);
-          highSlice = regResult.registeredSlice;
-          transforms[bHigh] = { dx: regResult.dx, dy: regResult.dy, angle: regResult.angle, fallbackMode: regResult.fallbackMode };
-          
-          bValuesToUse = [bLow, bHigh];
-          slicesToUse = [refSlice, highSlice];
-          registeredSlices[bHigh] = highSlice.pixelData;
         }
-        
-        let maps: MapResult;
-        if (useMultiB) {
-          maps = computeMultiBMaps(slicesToUse, bValuesToUse, bTarget, threshold);
-        } else {
-          maps = computeTwoPointMaps(slicesToUse[0], slicesToUse[1], bLow, bHigh, bTarget, threshold);
-        }
-        
-        results.push({ sliceIndex: i, maps, registeredSlices, transforms });
-        
-        if (i % 5 === 0 || i === totalSlices - 1) {
-          self.postMessage({ type: 'PROGRESS', payload: { step: es.pasoCalculo, progress: (i + 1) / totalSlices } });
+      );
+      state.matched = emparejado.matched;
+      const results = emparejado.resultados;
+
+      // El ADC del equipo, corte a corte a la misma altura que cada corte
+      // calculado, o null donde el equipo no tiene corte. Se rehace aquí porque
+      // los cortes emparejados cambian con el modo de cálculo.
+      const avisosCalculo = [...emparejado.errors];
+      let vendorAdcData: (Float32Array | null)[] = [];
+      if (state.adcEquipo) {
+        const { porCorte, sinPareja } = emparejarAdcEquipo(state.matched, state.adcEquipo.cortes);
+        vendorAdcData = porCorte.map(corte => corte?.pixelData ?? null);
+        if (sinPareja > 0) {
+          avisosCalculo.push(
+            es.avisoAdcSinPareja
+              .replace('{n}', String(sinPareja))
+              .replace('{total}', String(state.matched.length))
+          );
         }
       }
-      
-      // Also return raw arrays of vendor ADC if requested
-      const vendorAdcData = state.vendorAdcMaps.map(m => m.pixelData);
-      
+
       const dicomWindows: Record<number, { center: number, width: number } | null> = {};
       const refB = state.matched[Math.floor(state.matched.length / 2)];
       if (refB) {
@@ -315,7 +245,7 @@ self.onmessage = async (e: MessageEvent) => {
           bHigh,
           threshold,
           discardedCount: emparejado.discardedCount,
-          matchErrors: emparejado.errors
+          matchErrors: avisosCalculo
         }
       });
       

@@ -97,30 +97,33 @@ export async function createDerivedDicom(
   dataset['00080060'] = { vr: 'CS', Value: ["MR"] };
   dataset['00080008'] = { vr: 'CS', Value: ["DERIVED", "SECONDARY", mapType] };
   
+  // Los valores b del cálculo van en la descripción: QIBA pide que un mapa ADC
+  // declare con qué b se generó. Una b baja por debajo de 150 ya no se marca como
+  // aviso: es lo que usan el equipo y las guías.
+  const bCalculo = params.bValues ? params.bValues.join(',') : `${params.bLow},${params.bHigh}`;
+  const modo = params.bValues ? 'multi-b ' : '';
   if (mapType === 'ADC') {
     dataset['00200011'] = { vr: 'IS', Value: [1001] };
-    const desc = params.bValues ? `ADC calc multi-b` : `ADC calc (b=${params.bLow},${params.bHigh})`;
-    dataset['0008103E'] = { vr: 'LO', Value: [desc] };
+    dataset['0008103E'] = { vr: 'LO', Value: [`ADC calc ${modo}(b=${bCalculo})`] };
   } else if (mapType === 'EADC') {
     dataset['00200011'] = { vr: 'IS', Value: [1002] };
-    const desc = params.bValues ? `eADC calc multi-b` : `eADC calc (b=${params.bLow},${params.bHigh})`;
-    dataset['0008103E'] = { vr: 'LO', Value: [desc] };
+    dataset['0008103E'] = { vr: 'LO', Value: [`eADC calc ${modo}(b=${bCalculo})`] };
   } else if (mapType === 'CDWI') {
     dataset['00200011'] = { vr: 'IS', Value: [1003] };
     dataset['0008103E'] = { vr: 'LO', Value: [`cDWI b=${params.bTarget} (calc)`] };
   }
-  
-  // Solo se avisa cuando hay una b baja conocida y realmente por debajo de 150 s/mm².
-  // En ajuste multi-b no hay una única b de referencia, así que no se estampa el aviso.
-  if (params.bLow !== undefined && params.bLow < 150) {
-    dataset['0008103E'].Value[0] += " [LOW-B<150]";
-  }
-  
+
   let derivationFormula = "";
   if (mapType === 'ADC' && !params.bValues) derivationFormula = `ADC = ln(S(b=${params.bLow})/S(b=${params.bHigh}))/(${params.bHigh}-${params.bLow})`;
   else if (mapType === 'EADC' && !params.bValues) derivationFormula = `eADC = exp(-${params.bHigh} * ADC)`;
   else if (mapType === 'CDWI' && !params.bValues) derivationFormula = `cDWI = S(b=${params.bLow}) * exp((${params.bLow}-${params.bTarget}) * ADC)`;
-  else derivationFormula = `Multi-b fit`;
+  else {
+    // El algoritmo de ajuste se declara explícitamente, como pide QIBA.
+    const fit = `ADC = -slope of unweighted least-squares fit of ln S vs b (b=${bCalculo})`;
+    if (mapType === 'ADC') derivationFormula = fit;
+    else if (mapType === 'EADC') derivationFormula = `eADC = exp(-${Math.max(...params.bValues!)} * ADC); ${fit}`;
+    else derivationFormula = `cDWI = S0 * exp(-${params.bTarget} * ADC), S0 from the fit; ${fit}`;
+  }
   
   // La descripción de derivación es el rastro que queda dentro del archivo: quien
   // reciba el mapa tiene que poder saber con qué se calculó y con qué versión.

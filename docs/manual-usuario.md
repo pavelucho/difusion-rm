@@ -115,37 +115,70 @@ parámetros por defecto. Mientras tanto, la aplicación:
 1. **Lee el valor b de cada imagen**, buscándolo por orden de fiabilidad: el tag estándar
    de valor b, la secuencia de difusión, los tags privados de Siemens, GE y Philips y,
    como último recurso, el nombre de la secuencia o la descripción de la serie. Si tuvo
-   que deducirlo de un texto, o no lo encontró, lo avisa.
+   que deducirlo de un texto, lo avisa. Las imágenes sin valor b no entran en el cálculo.
 2. **Separa las series** y localiza la de difusión. Un estudio completo del PACS trae
-   también T1, T2, STIR o dinámicos; esas series no entran en el cálculo.
-3. **Promedia las imágenes repetidas**, las que coinciden en posición y valor b (varias
-   adquisiciones o direcciones de difusión).
-4. **Empareja los cortes** de b baja y b alta por su posición.
-5. **Aparta el mapa ADC del equipo**, si el estudio lo trae, para poder compararlo en la
-   pestaña [Validación](#validación-frente-al-adc-del-equipo).
+   también T1, T2, STIR o dinámicos, y las imágenes que el propio equipo deriva de la
+   difusión (eADC, b calculadas, DWI sintéticas, FA…); nada de eso entra en el cálculo
+   (vea [Series que no se usan](#series-que-no-se-usan)).
+3. **Promedia las imágenes repetidas** de una misma serie, las que coinciden en posición y
+   valor b (repeticiones o direcciones de difusión). No promedia series distintas: dos
+   adquisiciones de difusión, o una serie y su copia, quedan como opciones separadas.
+4. **Empareja por su posición los cortes** de los valores b del cálculo: la b baja y la b
+   alta o, con tres o más valores b, todos (vea [Valores por defecto](#valores-por-defecto)).
+5. **Asocia el mapa ADC del equipo** de esa misma adquisición, si el estudio lo trae: lo
+   pasa a mm²/s y busca para cada corte el del equipo a la misma altura, para compararlos
+   en la pestaña [Validación](#validación-frente-al-adc-del-equipo).
 
 Encima de los parámetros se indica cuántos **cortes usables** hay: cuántas posiciones
-tienen imagen en los dos valores b.
+tienen imagen en todos los valores b del cálculo.
 
 ### Elegir la serie de difusión
 
 Si el estudio contiene más de una serie, aparece el desplegable **Serie de difusión**, con
-la descripción de cada serie, su número de imágenes y sus valores b (o *sin valores b*).
-La aplicación elige sola la serie de difusión con más valores b y avisa de cuál está
-usando. Si no es la que quiere, elija otra: el cálculo se rehace sin volver a leer los
-archivos.
+la descripción de cada serie, su número de imágenes y sus valores b. Solo se pueden elegir
+las series de difusión; las demás se ven en gris, con *sin valores b* o con el motivo por
+el que no se usan. Las de difusión que tienen su mapa ADC del equipo lo indican con *con
+ADC del equipo*.
 
-Algunos equipos guardan cada valor b en una serie distinta. Si comparten matriz y marco de
-referencia, la aplicación las reúne en un solo conjunto, y la descripción lo indica con
-*(+1)*, *(+2)*… El mapa ADC del equipo suele quedar reunido así con la difusión.
+Al abrir el estudio, la aplicación elige sola y avisa de cuál está usando. Prefiere, por
+este orden:
 
-Si elige una serie *sin valores b*, el cálculo se detiene con el aviso *Los dos valores b
-seleccionados son iguales*. Vuelva a elegir la serie de difusión.
+1. la serie de difusión que trae el ADC del equipo, que es la que el equipo calculó y la
+   única que se puede [validar](#validación-frente-al-adc-del-equipo);
+2. la de más valores b;
+3. la traza antes que las direcciones de difusión sueltas de un tensor;
+4. la de más cortes.
+
+Si no es la que quiere, elija otra: el cálculo se rehace sin volver a leer los archivos.
+
+Algunos equipos guardan cada valor b en una serie distinta. La aplicación las reúne en un
+solo conjunto, y la descripción lo indica con *(+1)*, *(+2)*…, solo si son la misma
+adquisición: misma orientación, matriz, tamaño de píxel, marco de referencia, TR y TE,
+los mismos cortes y valores b que no se repiten. Dos series con el mismo valor b son dos
+adquisiciones, o una serie y su copia, y aparecen por separado en el desplegable.
 
 > [!NOTE]
 > Al cambiar de serie o abrir otro estudio, los parámetros vuelven a sus valores por
 > defecto y la vista vuelve al primer corte. Al abrir otro estudio se borran, además, las
 > ROI.
+
+#### Series que no se usan
+
+El equipo archiva junto a la difusión imágenes que fabrica a partir de ella. Algunas
+llevan un valor b, pero calcular con ellas sería circular, así que se ven en gris con su
+motivo y no entran en el cálculo:
+
+| En el desplegable | Qué es |
+| --- | --- |
+| *eADC del equipo* | El mapa eADC de GE, que el equipo guarda con el valor b de la DWI |
+| *b calculada por el equipo* | Imágenes de b alta sintetizadas por Siemens (*CALC_BVAL*) a partir de su ADC |
+| *DWI sintética del equipo* | Lo mismo en GE (*DW_Synthetic*) |
+| *mapa derivado del equipo* | FA, FA en color, ADC exponencial y tensor. La b = 0 del tensor sí se usa |
+| *copia sin procesar* | La copia *ORIG:* que GE archiva junto a la DWI procesada. Si solo está la copia, se usa la copia |
+| *ADC del equipo no asociado* | Un mapa ADC del equipo que no se usa: una copia de otro que sí se usa, o uno sin serie de difusión de su misma geometría |
+
+Cuando alguna de estas series tiene la misma geometría que la serie en uso, un aviso dice
+cuáles se han dejado fuera.
 
 ### Formatos que lee
 
@@ -165,34 +198,51 @@ Los mapas se recalculan solos cada vez que cambia un parámetro; mientras tanto,
 lateral muestra el progreso. Al abrir el estudio, la aplicación propone valores
 razonables: revíselos antes de medir.
 
+### Valores por defecto
+
+Al abrir el estudio, la aplicación calcula como el equipo y como las guías (PI-RADS v2.1,
+perfil QIBA de difusión): con los valores b del protocolo.
+
+- Con **dos valores b**, ADC de dos puntos entre el menor y el mayor.
+- Con **tres o más**, [ajuste multi-b](#ajuste-multi-b) con todos ellos.
+- La **b baja** es el menor valor b de la serie y la **b alta**, el mayor.
+
+Los protocolos ya ponen su b menor donde la piden las guías: 0 s/mm² en cerebro y mama,
+50–100 s/mm² en el cuerpo. Con estos valores por defecto, el ADC calculado es comparable
+con el del equipo y con los umbrales publicados.
+
 ### b baja y b alta
 
 El ADC de dos puntos se calcula entre la **b baja (referencia)** y la **b alta**, que se
 eligen en sus desplegables entre los valores b de la serie, en s/mm².
 
-- Por defecto, la **b alta** es el mayor valor b de la serie.
-- La **b baja** es, por defecto, el menor valor b igual o superior a 150 s/mm² que quede
-  por debajo de la b alta; si no hay ninguno, el menor valor b.
 - La b baja tiene que ser **menor** que la b alta. Si elige dos valores iguales, el cálculo
   se detiene; si la b baja es mayor, todos los vóxeles quedan fuera de rango y los mapas
   salen negros.
+- Con ajuste multi-b, la b baja es la referencia del corregistro y la b alta decide qué
+  imagen se muestra como *b alta adquirida*.
 
-Si la b baja es menor de 150 s/mm², aparece una advertencia en ámbar. Con b muy bajas, la
-microperfusión capilar (efecto IVIM) sobreestima el ADC y resta exactitud a la cDWI; lo
-recomendable es adquirir una b de 100–150 s/mm² y usarla como referencia. Es un aviso,
-no una prohibición: si la serie solo tiene b = 0, úsela sabiendo que el ADC saldrá
-sobreestimado. En los DICOM exportados, la descripción de serie lleva entonces la marca
-*[LOW-B<150]*.
+Con una b de 100 s/mm² o menos en el cálculo, el ADC recoge algo de perfusión capilar
+(efecto IVIM), que lo eleva, sobre todo en órganos muy vascularizados como el hígado o el
+riñón; en el cerebro es despreciable. Así lo calculan el equipo y las guías. Cuando la
+serie permite otra elección, una nota gris bajo *b baja* lo recuerda. Para un ADC con menos
+perfusión, uso propio de la investigación, desmarque el multi-b y elija una b baja mayor
+de 100 s/mm²: los valores dejarán de ser comparables con los del equipo y con los
+umbrales publicados.
 
 ### Ajuste multi-b
 
-Con tres o más valores b aparece la casilla **Ajuste por mínimos cuadrados (multi-b)**. En
-lugar de dos puntos, ajusta una recta ponderada al logaritmo de la señal frente a b con
-**todos** los valores b de la serie. Así el ruido se reparte entre más imágenes y se
-obtiene el mapa de **bondad de ajuste (R²)**.
+Con tres o más valores b aparece la casilla **Ajuste por mínimos cuadrados (multi-b)**,
+activada por defecto. En lugar de dos puntos, ajusta una recta al logaritmo de la señal
+frente a b con **todos** los valores b de la serie, por mínimos cuadrados **sin
+ponderar**. Así el ruido se reparte entre más imágenes y se obtiene el mapa de **bondad de
+ajuste (R²)**.
 
-- Usa todos los valores b, incluido b = 0 si la serie lo tiene: el sesgo por
-  microperfusión aplica igual.
+- Es el ajuste que usan los equipos y el software de referencia de QIBA. Hasta la versión
+  1.2, cada punto se ponderaba con el cuadrado de su señal medida: esa ponderación arrastra
+  el ruido de la medida y, en los estudios de cuerpo de Siemens, daba un ADC un 10 % más
+  alto que el del equipo.
+- Usa todos los valores b, incluido b = 0 si la serie lo tiene.
 - La b baja elegida sigue siendo la referencia del corregistro: las demás imágenes se
   alinean con ella.
 - La b alta elegida solo decide qué imagen se muestra como *b alta adquirida* y con cuál
@@ -281,7 +331,7 @@ lo que muestra:
 | **Mapa eADC** | exp(−b · ADC) | La restricción se ve **brillante**, sin el brillo heredado del T2 |
 | **DWI calculada** | DWI estimada a la b objetivo | La restricción destaca más cuanto más alta es la b objetivo |
 | **Bondad de ajuste (R²)** | Calidad del ajuste en cada vóxel, de 0 a 1 | Solo con ajuste multi-b; sin él, el panel queda negro |
-| **ADC del equipo** | Mapa ADC calculado por el equipo | Solo si el estudio lo trae |
+| **ADC del equipo** | Mapa ADC calculado por el equipo, en la misma escala que el calculado | Solo si el estudio lo trae. Muestra el corte del equipo a la misma altura; si no lo hay, lo dice |
 | **Diferencia (calculada − adquirida)** | DWI calculada menos b alta adquirida | Con b objetivo = b alta, muestra dónde el modelo no reproduce la imagen |
 
 > [!TIP]
@@ -424,8 +474,25 @@ tabla.
 
 ## Validación frente al ADC del equipo
 
-Esta pestaña aparece solo si el estudio incluye el mapa ADC calculado por el equipo. Sirve
-para comprobar, región a región, que el ADC calculado aquí coincide con el del equipo.
+Esta pestaña aparece solo si el estudio incluye el mapa ADC calculado por el equipo para la
+serie en uso: con su misma orientación, matriz y tamaño de píxel. Sirve para comprobar,
+región a región, que el ADC calculado aquí coincide con el del equipo.
+
+Antes de compararlos, la aplicación prepara el mapa del equipo:
+
+- **Lo pasa a mm²/s**, la unidad en que calcula. Los equipos lo guardan en 10⁻⁶ mm²/s
+  (un tejido de 0,8 × 10⁻³ mm²/s aparece como 800). La unidad se toma de la declaración
+  del propio DICOM, en el tipo de reescalado o, en GE, en la descripción de la serie; si
+  no está declarada, como en Siemens, se deduce de la magnitud de los valores. Si la
+  declaración no cuadra con los valores, se usan los valores y se avisa.
+- **Busca para cada corte el del equipo a la misma altura**, con una tolerancia de
+  ±0,5 mm, y no por orden: el mapa del equipo puede tener menos cortes que la DWI. Si el
+  estudio trae varios mapas del equipo, usa el de la misma adquisición que la serie en
+  uso.
+
+Donde el equipo no tiene corte a la altura del que está viendo, la pestaña lo dice, el
+botón **Añadir par de medidas** no se puede pulsar y el panel *ADC del equipo* aparece
+vacío con el aviso *El equipo no tiene corte a esta altura*. Cambie de corte.
 
 1. Dibuje una ROI y elíjala en **ROI para validar**.
 2. Pulse **Añadir par de medidas**. Se añade una fila con el corte, la etiqueta de la ROI,
@@ -446,10 +513,15 @@ Con dos o más pares aparecen:
 El archivo no identifica al paciente: si reúne varios estudios, anote a cuál corresponde
 cada fila.
 
-Para que la comparación tenga sentido, calcule con los mismos valores b que usó el equipo
-para su mapa (y, si el equipo ajusta todos los valores b, con el ajuste multi-b). Como el
-ADC del equipo se asigna a cada corte por orden, compruebe en el panel *ADC del equipo*
-que corresponde al corte que está midiendo.
+Para que la comparación tenga sentido, el cálculo tiene que ser el del equipo. Los
+[valores por defecto](#valores-por-defecto) ya lo son: los valores b del protocolo y, con
+tres o más, el mismo ajuste sin ponderar. Si cambia la b baja, la b alta o el multi-b,
+vuelva a ellos antes de añadir pares.
+
+Aun así, en los equipos Siemens el ADC del equipo sale algo más bajo que cualquier cálculo
+externo, hasta un 3,5 % en un estudio multicéntrico del NCI (Newitt et al., 2018): el
+equipo usa la b efectiva de la secuencia, un poco mayor que la b nominal guardada en el
+DICOM. Téngalo en cuenta al interpretar el sesgo.
 
 ## Fidelidad de la DWI calculada
 
@@ -491,11 +563,11 @@ archivo por corte:
 
 - Se calculan con los **parámetros vigentes**: b baja, b alta, b objetivo, multi-b,
   corregistro y umbral.
-- La descripción de serie resume el cálculo, por ejemplo *ADC calc (b=150,1500)* o
-  *cDWI b=2000 (calc)*.
-- Cada archivo lleva en su descripción de derivación, el tag (0008,2111), la fórmula, el
-  umbral de la máscara, el modo de corregistro y la versión de la aplicación que lo
-  calculó.
+- La descripción de serie resume el cálculo con sus valores b, por ejemplo *ADC calc
+  (b=0,1000)*, *ADC calc multi-b (b=50,400,800)* o *cDWI b=2000 (calc)*.
+- Cada archivo lleva en su descripción de derivación, el tag (0008,2111), la fórmula o el
+  ajuste usado, el umbral de la máscara, el modo de corregistro y la versión de la
+  aplicación que lo calculó.
 - Los vóxeles enmascarados valen 0.
 - Conservan los datos de paciente y de estudio del original, así que el visor o el PACS
   los agrupan con él.
@@ -511,10 +583,13 @@ admite archivar series derivadas de una herramienta de investigación.
 ### Registro de procesamiento
 
 **Descargar registro de procesamiento** genera `processing_log.json` con la fecha y hora,
-la versión de la aplicación, los valores b detectados, los parámetros elegidos, los cortes
-usados y descartados, la corrección de corregistro de cada corte y la ventana de cada
-panel. No contiene datos del paciente. Guárdelo junto a los mapas: permite saber después
-con qué se calcularon.
+la versión de la aplicación, la serie de difusión usada, los valores b detectados, los
+parámetros elegidos, el algoritmo de ajuste (dos puntos o mínimos cuadrados sin ponderar,
+con sus valores b), los cortes usados y descartados, la corrección de corregistro de cada
+corte y la ventana de cada panel. Si el estudio trae el ADC del equipo, anota también su
+serie, la unidad en que venía, de dónde se sacó esa unidad y cuántos cortes quedaron sin
+corte del equipo a su altura. No contiene datos del paciente. Guárdelo junto a los mapas:
+permite saber después con qué se calcularon.
 
 ### Tablas CSV
 
@@ -529,7 +604,8 @@ Las pestañas **Contraste** y **Validación** exportan sus tablas en CSV (`contr
   información que no estuviera en ellas.
 - Lea los avisos en ámbar antes de medir, sobre todo los de valores b deducidos o no
   encontrados.
-- Si la tiene, use como referencia una b de 100–150 s/mm².
+- Para comparar con el equipo o con umbrales publicados, calcule con los valores por
+  defecto, que son los del protocolo.
 - Para interpretar, mantenga la b objetivo en 2000 s/mm² o menos.
 - Vigile el porcentaje de vóxeles enmascarados de cada ROI.
 - En un trabajo con varios pacientes, use los mismos parámetros en todos y guarde el
@@ -541,8 +617,9 @@ Las pestañas **Contraste** y **Validación** exportan sus tablas en CSV (`contr
 
 - **Modelo monoexponencial.** Es razonable hasta b ≈ 2000 s/mm²; por encima, la señal se
   aparta del modelo y el ruido se amplifica.
-- **Sesgo por microperfusión (IVIM).** Una b de referencia muy baja, como b = 0,
-  sobreestima el ADC.
+- **Microperfusión (IVIM).** Con b de 100 s/mm² o menos, el ADC incluye algo de perfusión
+  capilar y sale más alto en órganos muy vascularizados. Es la convención del equipo y de
+  las guías, pero hay que tenerla presente al comparar con estudios que la eviten.
 - **Suelo de ruido.** En zonas de señal muy baja, el ruido de las imágenes de magnitud
   queda rectificado. La máscara lo mitiga, pero no puede quitar el suelo que ya está en
   las imágenes adquiridas.
@@ -564,18 +641,23 @@ que detienen el cálculo.
 | *El estudio no contiene ninguna serie de difusión con valores b legibles* | Falta la secuencia de difusión, o sus valores b no están en ningún tag conocido | Incluya la serie de difusión al exportar el estudio |
 | *No se pudieron leer n archivos: Compresión … todavía no soportada* | Imágenes con una compresión que la aplicación no decodifica | Expórtelas sin comprimir o en JPEG sin pérdida (vea [Formatos que lee](#formatos-que-lee)) |
 | *No se pudieron leer n archivos: Imagen multifotograma …* | Un único archivo contiene todos los cortes | Exporte la serie con un archivo por imagen |
-| *No se pudo leer el valor b de n imágenes; se asumió b = 0* | Esas imágenes no traen el valor b en ningún tag | Compruebe en el desplegable de la serie que los valores b son los del protocolo |
+| *n imágenes de la serie no traen el valor b en ningún tag y no se usan en el cálculo* | Parte de la serie de difusión llegó sin valor b; esas imágenes se dejan fuera | Compruebe que la serie está completa y que la exportación conserva los tags privados del equipo |
 | *El valor b de n imágenes se dedujo del nombre de la secuencia o de la descripción de serie* | El valor b salió de un texto, no de un tag de valor b | Verifique los valores b antes de interpretar |
 | *Se está usando la serie «…»* | Informativo: el estudio trae varias series | Si no es la serie de difusión que quiere, cámbiela en el desplegable |
-| *Se descartaron n cortes porque no tienen correspondencia entre las dos series seleccionadas* | Hay posiciones con imagen en un valor b pero no en el otro | Es normal si una b tiene más cortes; si son muchos, compruebe que las dos b son de la misma adquisición |
+| *No se usan n series que el equipo deriva de la difusión…* | Informativo: el estudio trae eADC, b calculadas, DWI sintéticas o una copia sin procesar con la misma geometría que la serie en uso (vea [Series que no se usan](#series-que-no-se-usan)) | Nada: no entran en el cálculo |
+| *El ADC del equipo no tiene corte a la altura de n de los m cortes calculados* | El mapa del equipo cubre menos cortes que la serie de difusión | En esos cortes no se puede validar; mida en los demás |
+| *El ADC del equipo declara …, pero sus valores son de …* | La unidad declarada en el DICOM no cuadra con los valores del mapa | Compruebe los valores del panel *ADC del equipo* antes de validar |
+| *La serie elegida no es de difusión* | Se eligió una serie sin dos valores b leídos de un tag | Elija una serie de difusión en el desplegable |
+| *Se descartaron n imágenes porque su corte no tiene imagen en todos los valores b del cálculo* | Hay posiciones con imagen en unos valores b pero no en otros | Es normal si una b tiene más cortes; si son muchos, compruebe que la serie está completa o desmarque el multi-b |
 | *Las series seleccionadas no comparten matriz o marco de referencia* | Los dos valores b vienen de adquisiciones distintas | Elija valores b de la misma adquisición |
-| *Los dos valores b seleccionados son iguales* | b baja y b alta coinciden, o la serie elegida no tiene valores b | Elija valores distintos, o la serie de difusión |
+| *Los dos valores b seleccionados son iguales* | b baja y b alta coinciden, o la serie elegida tiene un solo valor b | Elija valores distintos, u otra serie de difusión |
 | Los mapas salen negros | La b baja es mayor que la b alta, o el umbral de ruido es demasiado alto | Corrija los valores b o baje el umbral |
 | *Corte n: solución rechazada, se aplicó …* | El corregistro encontró una corrección fuera de los límites | Revise el movimiento en ese corte o pruebe otro modo |
 | *Ventana degenerada* | El ancho de la ventana es 1 o menos | Pulse *Restablecer ventana* |
 | El panel *Diferencia* se ve solo en blanco y negro | Su ventana inicial es muy estrecha | Escriba un ancho mayor en el campo Ancho |
 | Aviso de saturación al exportar | Algunos valores no caben en 16 bits | Revise la máscara y la b objetivo antes de exportar |
-| No aparece la pestaña *Validación* | El estudio no trae el ADC del equipo, o no se reconoce como tal | Incluya la serie ADC del equipo al exportar el estudio |
+| No aparece la pestaña *Validación* | El estudio no trae el ADC del equipo, no se reconoce como tal, o no tiene la geometría de la serie en uso | Incluya la serie ADC del equipo al exportar el estudio; en el desplegable, elija la serie *con ADC del equipo* |
+| El panel *ADC del equipo* dice *El equipo no tiene corte a esta altura* | El mapa del equipo no cubre este corte | Cambie de corte |
 | La aplicación va lenta o el navegador se cierra al cargar | El estudio es muy grande: todo se carga en memoria | Abra solo la carpeta de la serie de difusión |
 | No aparece la última versión | Las versiones nuevas se activan al recargar | Recargue la página, o cierre y vuelva a abrir la aplicación |
 
@@ -616,9 +698,8 @@ cDWI = S_baja · exp((b_baja − b_objetivo) · ADC)
 El eADC se calcula a partir del ADC, no como S_alta / S_baja: las dos expresiones
 coinciden solo si la b baja es 0.
 
-Ajuste multi-b: recta de mínimos cuadrados ponderados de ln S frente a b, con todos los
-valores b de la serie y un peso S² en cada punto. R² es el coeficiente de determinación
-ponderado de ese ajuste.
+Ajuste multi-b: recta de mínimos cuadrados ordinarios, sin ponderar, de ln S frente a b,
+con todos los valores b de la serie. R² es el coeficiente de determinación de ese ajuste.
 
 ```
 ln S(b) = ln S₀ − b · ADC

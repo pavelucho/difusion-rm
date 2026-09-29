@@ -16,6 +16,7 @@ function createSlice(value: number): AveragedSlice {
       frameOfReferenceUID: '',
       seriesDescription: '',
       instanceNumber: 1,
+      imageType: [],
       bValue: 0,
       bValueInferred: false,
       bValueSource: 'estandar',
@@ -111,5 +112,27 @@ describe('Map Computation', () => {
 
     expect(Math.abs(result.adc[0] - trueADC)).toBeLessThan(1e-6);
     expect(result.r2![0]).toBeCloseTo(1, 4);
+  });
+
+  it('7. Multi-b fit is unweighted least squares on ln S', () => {
+    // Señal no monoexponencial (perfusión a b baja): aquí cada ponderación da un
+    // ADC distinto, y el de la aplicación tiene que ser el de la recta sin ponderar.
+    const bValues = [50, 400, 800];
+    const signals = bValues.map(b => 20000 * (0.85 * Math.exp(-b * 0.001) + 0.15 * Math.exp(-b * 0.02)));
+    const y = signals.map(Math.log);
+    const bMean = bValues.reduce((a, b) => a + b, 0) / 3;
+    const yMean = y.reduce((a, b) => a + b, 0) / 3;
+    const sxy = bValues.reduce((s, b, j) => s + (b - bMean) * (y[j] - yMean), 0);
+    const sxx = bValues.reduce((s, b) => s + (b - bMean) ** 2, 0);
+    const slope = sxy / sxx;
+    const intercept = yMean - slope * bMean;
+    const ssRes = bValues.reduce((s, b, j) => s + (y[j] - (intercept + slope * b)) ** 2, 0);
+    const ssTot = y.reduce((s, v) => s + (v - yMean) ** 2, 0);
+
+    const result = computeMultiBMaps(bValues.map(b => createSlice(signals[bValues.indexOf(b)])), bValues, 2000, 0);
+
+    expect(result.adc[0]).toBeCloseTo(-slope, 9);
+    expect(result.r2![0]).toBeCloseTo(1 - ssRes / ssTot, 5);
+    expect(result.cdwi[0] / Math.exp(intercept + slope * 2000)).toBeCloseTo(1, 4);
   });
 });

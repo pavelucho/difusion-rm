@@ -27,6 +27,12 @@ function parsePoint3D(val: string | undefined): Point3D | undefined {
   return undefined;
 }
 
+function numeroOIndefinido(val: string | undefined): number | undefined {
+  if (val === undefined) return undefined;
+  const n = parseFloat(val);
+  return Number.isFinite(n) ? n : undefined;
+}
+
 function parseVectors(val: string | undefined): [Point3D, Point3D] | undefined {
   if (!val) return undefined;
   const parts = val.split('\\').map(parseFloat);
@@ -49,12 +55,11 @@ function parseVectors(val: string | undefined): [Point3D, Point3D] | undefined {
  */
 function detectVendorADC(
   seriesDescription: string,
-  imageType: string,
+  componentesTipo: string[],
   rescaleType: string | undefined
 ): boolean {
   if (rescaleType === '10-6 mm2/s') return true;
 
-  const componentesTipo = imageType.split('\\').map(c => c.trim().toUpperCase());
   if (componentesTipo.includes('ADC')) return true;
 
   // «ADC» delimitado: acierta con "DWI ADC" y "ADC_map", no con "eADC".
@@ -99,16 +104,22 @@ export function parseDicom(buffer: ArrayBuffer): DicomSlice {
   const studyInstanceUID = dataset.string('x0020000d') ?? '';
   const frameOfReferenceUID = dataset.string('x00200052') ?? '';
   const seriesDescription = dataset.string('x0008103e') ?? '';
+  const seriesNumber = numeroOIndefinido(dataset.string('x00200011'));
   const instanceNumberStr = dataset.string('x00200013');
   const instanceNumber = instanceNumberStr ? parseInt(instanceNumberStr, 10) : 0;
-  
-  const echoTimeStr = dataset.string('x00180081');
-  const echoTime = echoTimeStr ? parseFloat(echoTimeStr) : undefined;
+
+  const echoTime = numeroOIndefinido(dataset.string('x00180081'));
+  const repetitionTime = numeroOIndefinido(dataset.string('x00180080'));
+  // Solo hhmmss: las fracciones de segundo difieren entre el mapa y sus imágenes.
+  const acquisitionTime = dataset.string('x00080032')?.slice(0, 6) || undefined;
 
   const { value: bValue, source: bValueSource, inferred: bValueInferred } = readBValue(dataset);
 
   const rescaleType = dataset.string('x00281054');
-  const imageType = dataset.string('x00080008') ?? '';
+  const imageType = (dataset.string('x00080008') ?? '')
+    .split('\\')
+    .map(c => c.trim().toUpperCase())
+    .filter(Boolean);
   const isVendorADC = detectVendorADC(seriesDescription, imageType, rescaleType);
 
   const rescaleInterceptStr = dataset.string('x00281052');
@@ -157,7 +168,11 @@ export function parseDicom(buffer: ArrayBuffer): DicomSlice {
       studyInstanceUID,
       frameOfReferenceUID,
       seriesDescription,
+      seriesNumber,
       instanceNumber,
+      imageType,
+      acquisitionTime,
+      repetitionTime,
       echoTime,
       bValue,
       bValueInferred,
@@ -168,6 +183,7 @@ export function parseDicom(buffer: ArrayBuffer): DicomSlice {
       canonicalPosition,
       rescaleIntercept,
       rescaleSlope,
+      rescaleType,
       windowCenter,
       windowWidth,
       dataset,

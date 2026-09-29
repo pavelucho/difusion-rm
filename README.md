@@ -142,8 +142,10 @@ cDWI = S1 · exp((b1 − bObjetivo) · ADC)
 Estima la señal a una b objetivo sintética, sin necesidad de una adquisición larga
 adicional.
 
-Con tres o más valores b se puede usar regresión lineal ponderada sobre `ln(S)` frente a
-`b`, que además produce un mapa de bondad de ajuste (R²).
+Con tres o más valores b, el cálculo por defecto es una regresión lineal por mínimos
+cuadrados ordinarios, sin ponderar, de `ln(S)` frente a `b` con todos los valores b del
+protocolo, como la calculan los equipos y el software de referencia de QIBA. Además
+produce un mapa de bondad de ajuste (R²).
 
 ## Escalado del DICOM exportado
 
@@ -159,8 +161,11 @@ Los mapas derivados siguen las convenciones habituales de fabricante:
 
 - **Validez del modelo monoexponencial.** Es razonable hasta b ≈ 2000 s/mm². Por encima,
   el ruido se amplifica y la señal se aparta del modelo.
-- **Sesgo por microperfusión (IVIM).** Usar una b muy baja (p. ej. b = 0) como referencia
-  sobreestima el ADC. Se recomienda b = 100–150 s/mm² para anular ese efecto.
+- **Microperfusión (IVIM).** Con b de 100 s/mm² o menos, el ADC incluye algo de
+  perfusión capilar y sale más alto en órganos muy vascularizados. Es la convención de
+  los equipos y de las guías (PI-RADS v2.1, perfil QIBA de difusión), y la que usa la
+  aplicación por defecto; para reducirla hay que elegir a mano una b baja mayor de
+  100 s/mm², a costa de dejar de ser comparable con el equipo.
 - **Suelo de ruido rectificado.** En zonas de señal muy baja el ruido queda rectificado por
   la reconstrucción en magnitud. El enmascarado de fondo lo mitiga, pero no puede
   revertir el suelo ya presente en las imágenes adquiridas.

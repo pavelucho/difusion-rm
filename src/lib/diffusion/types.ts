@@ -18,7 +18,13 @@ export interface DicomMetadata {
   studyInstanceUID: string;
   frameOfReferenceUID: string;
   seriesDescription: string;
+  seriesNumber?: number;
   instanceNumber: number;
+  /** (0008,0008) en mayúsculas y separado por componentes: DERIVED, DIFFUSION, EADC… */
+  imageType: string[];
+  /** (0008,0032), hhmmss. Enlaza el mapa ADC del equipo con la adquisición de la que sale. */
+  acquisitionTime?: string;
+  repetitionTime?: number;
   echoTime?: number;
   bValue: number;
   bValueInferred: boolean;
@@ -38,6 +44,7 @@ export interface DicomMetadata {
   canonicalPosition: number;
   rescaleIntercept: number;
   rescaleSlope: number;
+  rescaleType?: string;
   windowCenter?: number;
   windowWidth?: number;
   dataset: any; // dicom-parser dataset

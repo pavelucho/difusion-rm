@@ -9,6 +9,8 @@ interface PanelProps {
   title: string;
   mapType: string;
   pixels?: Float32Array;
+  /** Texto que sustituye a la imagen cuando no hay píxeles que mostrar. */
+  sinImagen?: string;
   mask?: Uint8Array;
   width: number;
   height: number;
@@ -31,8 +33,8 @@ interface PanelProps {
   onResetWindow: () => void;
 }
 
-export function Panel({ 
-  id, title, mapType, pixels, width, height, colormap, 
+export function Panel({
+  id, title, mapType, pixels, sinImagen, width, height, colormap,
   onWheel, windowCenter, windowWidth, userAdjusted, onWindowChange, onWlDrag, onResetWindow,
   syncTransform, onTransform,
   rois = [], draftRoi = null, activeTool = null,
@@ -60,6 +62,17 @@ export function Panel({
   }, [syncTransform, id]);
 
   useEffect(() => {
+    // Sin píxeles, el lienzo se vacía: si no, seguía mostrando la imagen del corte
+    // anterior, y el ADC del equipo parecía existir donde no lo hay.
+    if (canvasRef.current && !pixels) {
+      const ctx = canvasRef.current.getContext('2d');
+      if (ctx) {
+        canvasRef.current.width = width;
+        canvasRef.current.height = height;
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(0, 0, width, height);
+      }
+    }
     if (canvasRef.current && pixels) {
       if ((mapType === 'LOW-B' || mapType === 'HIGH-B' || mapType === 'CDWI') && windowWidth <= 1) {
         // Do not silently render a degenerate window
@@ -318,8 +331,15 @@ export function Panel({
             style={{ 
               transform: `translate(${panX}px, ${panY}px) scale(${zoom})`,
               transformOrigin: 'center center'
-            }} 
+            }}
           />
+          {sinImagen && (
+            <div className="absolute inset-0 flex items-center justify-center p-4 pointer-events-none">
+              <span className="text-xs text-amber-400 bg-black/70 border border-amber-900/60 rounded px-2 py-1 text-center">
+                {sinImagen}
+              </span>
+            </div>
+          )}
         </div>
       </div>
       <div className="absolute bottom-0 right-0 bg-black/60 text-gray-400 text-[10px] p-1 z-10 flex flex-col items-end gap-1">

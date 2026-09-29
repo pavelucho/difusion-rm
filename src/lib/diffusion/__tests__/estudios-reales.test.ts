@@ -2,14 +2,11 @@ import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import { parseDicom } from '../dicom-reader';
-import {
-  filtrarPorSerie,
-  groupAndAverageSlices,
-  inventariarSeries,
-  matchSlices,
-} from '../series-builder';
-import { computeTwoPointMaps, estimateNoiseThreshold } from '../maps';
+import { cortesDelConjunto, inventariarSeries, serieInicial } from '../series-builder';
+import { calcularMapas, prepararConjunto } from '../estudio';
+import { emparejarAdcEquipo, TOLERANCIA_POSICION_MM } from '../adc-equipo';
 import { createDerivedDicom } from '../dicom-writer';
+import { DicomNoSoportadoError } from '../pixel-data';
 import type { DicomSlice } from '../types';
 
 /**
@@ -42,41 +39,77 @@ function estudios(): { nombre: string; ruta: string }[] {
     .map(e => ({ nombre: e.name, ruta: path.join(RAIZ, e.name) }));
 }
 
-function leerEstudio(ruta: string): DicomSlice[] {
-  return archivosDicom(ruta).map(archivo => {
+/**
+ * Como la aplicación: un objeto DICOM que no es imagen (informe estructurado,
+ * espectroscopía) se ignora; una imagen que no se sabe decodificar se cuenta.
+ */
+function leerEstudio(ruta: string): { cortes: DicomSlice[]; noSoportadas: string[] } {
+  const cortes: DicomSlice[] = [];
+  const noSoportadas: string[] = [];
+  for (const archivo of archivosDicom(ruta)) {
     const contenido = fs.readFileSync(archivo);
     const buffer = contenido.buffer.slice(
       contenido.byteOffset,
       contenido.byteOffset + contenido.byteLength
     ) as ArrayBuffer;
-    return parseDicom(buffer);
-  });
+    try {
+      cortes.push(parseDicom(buffer));
+    } catch (error) {
+      const sinImagen = error instanceof Error && error.message.startsWith('El archivo no contiene datos de imagen');
+      if (error instanceof DicomNoSoportadoError && !sinImagen) noSoportadas.push(`${archivo}: ${error.message}`);
+    }
+  }
+  return { cortes, noSoportadas };
 }
 
 describe.skipIf(!hayEstudios)('estudios DICOM reales', () => {
   for (const estudio of estudios()) {
     describe(estudio.nombre, () => {
-      const todos = leerEstudio(estudio.ruta);
+      const { cortes: todos, noSoportadas } = leerEstudio(estudio.ruta);
 
-      // Igual que hace la aplicación: se inventaría el estudio y se trabaja solo
-      // sobre la serie de difusión. Un export completo del PACS trae además T1,
-      // T2, STIR y dinámicos, que no tienen nada que ver con el cálculo.
+      // Igual que hace la aplicación al arrastrar el estudio entero: se inventaría,
+      // se elige el conjunto de difusión por defecto y se prepara con los valores
+      // por defecto.
       const series = inventariarSeries(todos);
-      const seriesDifusion = series.filter(s => s.esDifusion);
-      const cortes = seriesDifusion.length
-        ? filtrarPorSerie(todos, seriesDifusion[0].seriesUIDs)
-        : [];
+      const elegida = serieInicial(series);
+      const cortes = elegida ? cortesDelConjunto(todos, elegida).difusion : [];
+
+      /** El cálculo del primer COMPUTE de la aplicación, con su corregistro por defecto. */
+      const calcularComoLaApp = () => {
+        const p = prepararConjunto(todos, series, elegida!);
+        return calcularMapas(p.diffusion, p.bValues, {
+          bLow: p.bLow,
+          bHigh: p.bHigh,
+          bTarget: 2000,
+          threshold: p.threshold,
+          useMultiB: p.multiB,
+          registrationMode: 'translation',
+        });
+      };
 
       it('lee todas las imágenes sin fallar', () => {
         expect(todos.length).toBeGreaterThan(0);
+        expect(noSoportadas).toEqual([]);
       });
 
       it('identifica una serie de difusión entre todas las del estudio', () => {
-        expect(seriesDifusion.length, 'ninguna serie de difusión detectada').toBeGreaterThan(0);
+        expect(elegida, 'ninguna serie de difusión detectada').toBeDefined();
         expect(cortes.length).toBeGreaterThan(0);
-        // La serie elegida no puede arrastrar imágenes de otras secuencias.
-        const matrices = new Set(cortes.map(c => `${c.metadata.rows}x${c.metadata.columns}`));
-        expect(matrices.size, `la serie mezcla matrices: ${[...matrices]}`).toBe(1);
+        // El conjunto elegido no puede arrastrar imágenes de otras secuencias ni
+        // de otra orientación.
+        const geometrias = new Set(
+          cortes.map(c => `${c.metadata.rows}x${c.metadata.columns}|${JSON.stringify(c.metadata.imageOrientationPatient)}`)
+        );
+        expect(geometrias.size, `el conjunto mezcla geometrías: ${[...geometrias]}`).toBe(1);
+      });
+
+      it('no calcula con imágenes derivadas o sintéticas del equipo', () => {
+        for (const corte of cortes) {
+          const tipo = corte.metadata.imageType;
+          expect(tipo, corte.metadata.seriesDescription).not.toContain('EADC');
+          expect(tipo, corte.metadata.seriesDescription).not.toContain('CALC_BVALUE');
+          expect(corte.metadata.seriesDescription).not.toMatch(/synthetic/i);
+        }
       });
 
       it('obtiene el valor b de un tag de valor b, no por inferencia', () => {
@@ -86,7 +119,7 @@ describe.skipIf(!hayEstudios)('estudios DICOM reales', () => {
 
       it('encuentra al menos dos valores b distintos', () => {
         const valores = new Set(cortes.map(c => c.metadata.bValue));
-        expect([...valores].sort((a, b) => a - b).length).toBeGreaterThanOrEqual(2);
+        expect(valores.size).toBeGreaterThanOrEqual(2);
       });
 
       it('decodifica píxeles con rango plausible', () => {
@@ -110,25 +143,12 @@ describe.skipIf(!hayEstudios)('estudios DICOM reales', () => {
         }
       });
 
-      it('empareja cortes entre las dos series y calcula un ADC plausible', () => {
-        const { diffusion } = groupAndAverageSlices(cortes);
-        const valoresB = [...new Set(
-          [...diffusion.values()].map(g => g.metadata.bValue)
-        )].sort((a, b) => a - b);
-
-        const bBaja = valoresB[0];
-        const bAlta = valoresB[valoresB.length - 1];
-
-        const { matched, discardedCount } = matchSlices(diffusion, [bBaja, bAlta]);
+      it('empareja los cortes y calcula un ADC plausible con los valores por defecto', () => {
+        const { matched, resultados, discardedCount } = calcularComoLaApp();
         expect(matched.length).toBeGreaterThan(0);
         expect(discardedCount).toBe(0);
 
-        const central = matched[Math.floor(matched.length / 2)];
-        const sBaja = central.slicesByBValue.get(bBaja)!;
-        const sAlta = central.slicesByBValue.get(bAlta)!;
-        const { threshold } = estimateNoiseThreshold(sBaja);
-
-        const mapas = computeTwoPointMaps(sBaja, sAlta, bBaja, bAlta, 2000, threshold);
+        const mapas = resultados[Math.floor(resultados.length / 2)].maps;
 
         let dentroDeMascara = 0;
         let sumaAdc = 0;
@@ -140,8 +160,7 @@ describe.skipIf(!hayEstudios)('estudios DICOM reales', () => {
         }
 
         // Con una máscara de fondo razonable, el tejido ocupa buena parte del corte.
-        const fraccion = dentroDeMascara / mapas.mask.length;
-        expect(fraccion).toBeGreaterThan(0.05);
+        expect(dentroDeMascara / mapas.mask.length).toBeGreaterThan(0.05);
 
         // ADC medio de tejido: del orden de 1e-3 mm²/s.
         const adcMedio = sumaAdc / dentroDeMascara;
@@ -149,19 +168,40 @@ describe.skipIf(!hayEstudios)('estudios DICOM reales', () => {
         expect(adcMedio).toBeLessThan(0.0035);
       });
 
-      it('exporta un mapa ADC que se vuelve a leer correctamente', async () => {
-        const { diffusion } = groupAndAverageSlices(cortes);
-        const valoresB = [...new Set([...diffusion.values()].map(g => g.metadata.bValue))]
-          .sort((a, b) => a - b);
-        const bBaja = valoresB[0];
-        const bAlta = valoresB[valoresB.length - 1];
+      it('lee el ADC del equipo en mm²/s y lo empareja por posición', () => {
+        const { adcEquipo } = prepararConjunto(todos, series, elegida!);
+        if (!adcEquipo) return; // el estudio no lo trae
+        const { matched } = calcularComoLaApp();
 
-        const { matched } = matchSlices(diffusion, [bBaja, bAlta]);
-        const central = matched[Math.floor(matched.length / 2)];
-        const sBaja = central.slicesByBValue.get(bBaja)!;
-        const sAlta = central.slicesByBValue.get(bAlta)!;
-        const { threshold } = estimateNoiseThreshold(sBaja);
-        const mapas = computeTwoPointMaps(sBaja, sAlta, bBaja, bAlta, 2000, threshold);
+        const { porCorte } = emparejarAdcEquipo(matched, adcEquipo.cortes);
+        const emparejados = matched.filter((_, i) => porCorte[i]);
+        expect(emparejados.length, 'ningún corte del equipo a la altura de los calculados').toBeGreaterThan(0);
+        matched.forEach((corte, i) => {
+          const delEquipo = porCorte[i];
+          if (!delEquipo) return;
+          expect(Math.abs(delEquipo.metadata.canonicalPosition - corte.position)).toBeLessThanOrEqual(TOLERANCIA_POSICION_MM);
+        });
+
+        // Mediana del ADC del equipo dentro del tejido: tiene que estar en mm²/s.
+        const valores: number[] = [];
+        for (const corte of porCorte) {
+          if (!corte) continue;
+          for (let i = 0; i < corte.pixelData.length; i += 7) {
+            if (corte.pixelData[i] > 0) valores.push(corte.pixelData[i]);
+          }
+        }
+        valores.sort((a, b) => a - b);
+        const mediana = valores[Math.floor(valores.length / 2)];
+        expect(mediana).toBeGreaterThan(0.0001);
+        expect(mediana).toBeLessThan(0.004);
+      });
+
+      it('exporta un mapa ADC que se vuelve a leer correctamente', async () => {
+        const { bLow, bHigh, bValues, multiB, threshold } = prepararConjunto(todos, series, elegida!);
+        const { matched, resultados } = calcularComoLaApp();
+        const centro = Math.floor(matched.length / 2);
+        const sBaja = matched[centro].slicesByBValue.get(bLow)!;
+        const mapas = resultados[centro].maps;
 
         const seriesUID = '1.2.826.0.1.3680043.10.1338.1';
         const sopUID = '1.2.826.0.1.3680043.10.1338.2';
@@ -169,7 +209,7 @@ describe.skipIf(!hayEstudios)('estudios DICOM reales', () => {
           sBaja,
           mapas.adc,
           'ADC',
-          { bLow: bBaja, bHigh: bAlta, bTarget: 2000, threshold, registration: 'translation' },
+          { bLow, bHigh, bValues: multiB ? bValues : undefined, bTarget: 2000, threshold, registration: 'translation' },
           seriesUID,
           sopUID
         );

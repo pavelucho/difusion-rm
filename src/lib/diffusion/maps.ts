@@ -94,6 +94,16 @@ export function computeTwoPointMaps(
   return { adc, eadc, cdwi, mask, bTarget, bLow: b1, bHigh: b2 };
 }
 
+/**
+ * Ajuste multi-b: recta de mínimos cuadrados ordinarios, sin ponderar, de ln S
+ * frente a b en cada vóxel.
+ *
+ * Es el ajuste que usan los equipos y casi todo el software de referencia (QIBA,
+ * QIN). Hasta la versión 1.2 cada punto se ponderaba con el cuadrado de su señal
+ * medida: esos pesos arrastran el ruido de la propia medida y sesgan el ADC
+ * (Veraart et al., NeuroImage 2013), y con señal no monoexponencial daban más
+ * peso a las b bajas. Frente al ADC de Siemens en cuerpo, el sesgo era de +10 %.
+ */
 export function computeMultiBMaps(
   slices: AveragedSlice[],
   bValues: number[],
@@ -116,6 +126,12 @@ export function computeMultiBMaps(
   const sLow = slices[minBIndex].pixelData;
   const sHigh = slices[maxBIndex].pixelData;
 
+  // Sin ponderar, los términos que solo dependen de b son comunes a todos los vóxeles.
+  const n = bValues.length;
+  const bMedia = bValues.reduce((suma, b) => suma + b, 0) / n;
+  const sxx = bValues.reduce((suma, b) => suma + (b - bMedia) * (b - bMedia), 0);
+  const y = new Float64Array(n);
+
   for (let i = 0; i < numPixels; i++) {
     const v1 = sLow[i];
     const v2 = sHigh[i];
@@ -128,63 +144,41 @@ export function computeMultiBMaps(
       }
     }
 
-    if (v1 > threshold && v2 > 0 && validSlices) {
-      let sumW = 0, sumWx = 0, sumWy = 0, sumWxx = 0, sumWxy = 0;
-      let sumY = 0;
-      
-      for (let j = 0; j < bValues.length; j++) {
-        const s = slices[j].pixelData[i];
-        const b = bValues[j];
-        const y = Math.log(s);
-        const w = s * s;
-        
-        sumW += w;
-        sumWx += w * b;
-        sumWy += w * y;
-        sumWxx += w * b * b;
-        sumWxy += w * b * y;
-        sumY += y;
+    if (v1 > threshold && v2 > 0 && validSlices && sxx > 0) {
+      let yMedia = 0;
+      for (let j = 0; j < n; j++) {
+        y[j] = Math.log(slices[j].pixelData[i]);
+        yMedia += y[j];
       }
-      
-      const delta = sumW * sumWxx - sumWx * sumWx;
-      if (delta !== 0) {
-        // y = C - ADC * b => slope is -ADC
-        const slope = (sumW * sumWxy - sumWx * sumWy) / delta;
-        const intercept = (sumWxx * sumWy - sumWx * sumWxy) / delta;
-        const computedAdc = -slope;
+      yMedia /= n;
 
-        if (Number.isFinite(computedAdc) && computedAdc >= 0 && computedAdc <= 0.004) {
-          adc[i] = computedAdc;
-          eadc[i] = Math.exp(-bHigh * computedAdc);
-          // General cdwi from fitted intercept: cDWI = S(bTarget) = exp(intercept - bTarget * ADC)
-          // Wait, prompt says "cDWI = S1 * Math.exp((b1 - bTarget) * ADC)" for two point.
-          // For multi-b, what should we use? Let's use the fitted intercept (S0 = exp(intercept)) 
-          // cDWI = S0 * exp(-bTarget * ADC).
-          cdwi[i] = Math.exp(intercept - bTarget * computedAdc);
-          
-          // R^2 calculation
-          let yMeanW = sumWy / sumW;
-          let ssTot = 0;
-          let ssRes = 0;
-          
-          for (let j = 0; j < bValues.length; j++) {
-            const s = slices[j].pixelData[i];
-            const b = bValues[j];
-            const y = Math.log(s);
-            const w = s * s;
-            const yPred = intercept + slope * b;
-            
-            ssTot += w * (y - yMeanW) * (y - yMeanW);
-            ssRes += w * (y - yPred) * (y - yPred);
-          }
-          
-          let r2 = 1 - (ssRes / (ssTot === 0 ? 1 : ssTot));
-          if (!Number.isFinite(r2)) r2 = 0;
-          r2Map[i] = r2;
+      let sxy = 0;
+      for (let j = 0; j < n; j++) sxy += (bValues[j] - bMedia) * (y[j] - yMedia);
 
-          mask[i] = 1;
-          continue;
+      // ln S = ln S0 − b · ADC: la pendiente es −ADC. Se resta de 0 para que una
+      // pendiente nula dé 0 y no −0.
+      const slope = sxy / sxx;
+      const intercept = yMedia - slope * bMedia;
+      const computedAdc = 0 - slope;
+
+      if (Number.isFinite(computedAdc) && computedAdc >= 0 && computedAdc <= 0.004) {
+        adc[i] = computedAdc;
+        eadc[i] = Math.exp(-bHigh * computedAdc);
+        // La cDWI sale de la recta ajustada: S0 · exp(−b_objetivo · ADC).
+        cdwi[i] = Math.exp(intercept - bTarget * computedAdc);
+
+        let ssTot = 0;
+        let ssRes = 0;
+        for (let j = 0; j < n; j++) {
+          const yPred = intercept + slope * bValues[j];
+          ssTot += (y[j] - yMedia) * (y[j] - yMedia);
+          ssRes += (y[j] - yPred) * (y[j] - yPred);
         }
+        const r2 = 1 - (ssRes / (ssTot === 0 ? 1 : ssTot));
+        r2Map[i] = Number.isFinite(r2) ? r2 : 0;
+
+        mask[i] = 1;
+        continue;
       }
     }
 

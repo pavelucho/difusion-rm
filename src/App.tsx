@@ -3,6 +3,7 @@ import { BookOpen, Download, Loader2, Quote, Save, Upload } from 'lucide-react';
 import { es } from './i18n/es';
 import { RoiShape, RoiState, rasterizeRoi } from './lib/roi';
 import { computeRoiStats, computeContrast, computeLinCCC } from './lib/diffusion/stats';
+import { nombreExclusion } from './lib/diffusion/estudio';
 import { Panel } from './components/Panel';
 import { Cita } from './components/Cita';
 import { archivosDesdeArrastre, clasificarEntrada } from './lib/entrada-archivos';
@@ -50,7 +51,8 @@ export default function App() {
   const [currentSlice, setCurrentSlice] = useState(0);
   
   const [results, setResults] = useState<any[]>([]);
-  const [vendorAdcData, setVendorAdcData] = useState<any[]>([]);
+  // Uno por corte calculado, a su misma altura; null donde el equipo no tiene corte.
+  const [vendorAdcData, setVendorAdcData] = useState<(Float32Array | null)[]>([]);
 
   const [panelConfigs, setPanelConfigs] = useState<string[]>(['HIGH-B', 'CDWI', 'ADC', 'EADC']);
   const [activeTab, setActiveTab] = useState<'ROI' | 'CONTRAST' | 'VALIDATION' | 'FIDELITY'>('ROI');
@@ -103,11 +105,12 @@ export default function App() {
         // El primer cálculo usa los valores por defecto de abajo, así que los
         // controles vuelven a ellos: si no, tras cambiar de serie o de estudio
         // mostraban la b objetivo o el multi-b anteriores, que no eran los
-        // calculados. El corte vuelve al primero porque el anterior puede no
-        // existir en la serie nueva, y las ventanas y filas de contraste fijadas
-        // pertenecían a otras imágenes.
+        // calculados. El multi-b se activa solo con tres o más valores b, como
+        // calcula el equipo. El corte vuelve al primero porque el anterior puede
+        // no existir en la serie nueva, y las ventanas y filas de contraste
+        // fijadas pertenecían a otras imágenes.
         setBTarget(2000);
-        setUseMultiB(false);
+        setUseMultiB(payload.useMultiB);
         setRegistrationMode('translation');
         setCurrentSlice(0);
         setContrastRows([]);
@@ -121,7 +124,7 @@ export default function App() {
             bHigh: payload.bHigh,
             bTarget: 2000,
             threshold: payload.threshold,
-            useMultiB: false,
+            useMultiB: payload.useMultiB,
             registrationMode: 'translation'
           }
         });
@@ -399,11 +402,17 @@ export default function App() {
                       });
                     }}
                   >
+                    {/* Solo se puede elegir difusión. El resto se lista para que se vea
+                        qué trae el estudio y por qué no se usa. */}
                     {meta.series.map((s: any) => (
-                      <option key={s.id} value={s.id}>
+                      <option key={s.id} value={s.id} disabled={!s.esDifusion}>
                         {s.descripcion} — {es.serieImagenes.replace('{n}', String(s.imagenes))}
                         {' · '}
-                        {s.esDifusion ? `b ${s.valoresB.join(', ')}` : es.serieSinDifusion}
+                        {s.esDifusion
+                          ? `b ${s.valoresB.join(', ')}${s.conAdc ? ` · ${es.serieConAdc}` : ''}`
+                          : s.excluida
+                            ? es.serieNoSeUsa.replace('{motivo}', nombreExclusion(s.excluida))
+                            : es.serieSinDifusion}
                       </option>
                     ))}
                   </select>
@@ -425,8 +434,13 @@ export default function App() {
                     <option key={b} value={b}>{b}</option>
                   ))}
                 </select>
-                {bLow < 150 && (
-                  <div className="text-amber-500 text-[10px] mt-1 leading-tight">{es.warnLowB}</div>
+                {/* Nota, no advertencia: una b baja de 0–100 es lo que usan el equipo y
+                    las guías. Solo aparece cuando la serie permite elegir otra. */}
+                {(useMultiB ? meta.bValues[0] : bLow) <= 100 &&
+                  meta.bValues.some((b: number) => b > 100 && b < bHigh) && (
+                  <div className="text-gray-400 text-[10px] mt-1 leading-tight">
+                    {useMultiB ? es.notaPerfusionMultiB : es.notaPerfusion}
+                  </div>
                 )}
               </div>
 
@@ -567,7 +581,7 @@ export default function App() {
                     else if (activePanelConfig === 'LOW-B') activePixels = res.registeredSlices[bLow];
                     else if (activePanelConfig === 'HIGH-B') activePixels = res.registeredSlices[bHigh];
                     else if (activePanelConfig === 'R2') activePixels = res.maps.r2;
-                    else if (activePanelConfig === 'VENDOR-ADC') activePixels = vendorAdcData[currentSlice];
+                    else if (activePanelConfig === 'VENDOR-ADC') activePixels = vendorAdcData[currentSlice] ?? undefined;
                     else if (activePanelConfig === 'DIFF' && res.maps.cdwi && res.registeredSlices[bHigh]) {
                       activePixels = new Float32Array(res.maps.cdwi.length);
                       for (let i = 0; i < activePixels.length; i++) {
@@ -848,14 +862,18 @@ export default function App() {
                     cccResult = computeLinCCC(vend, calc); // x=vendor, y=calc
                   }
 
+                  // El worker entrega el ADC del equipo ya emparejado por posición y en
+                  // mm²/s, como el calculado; null si el equipo no tiene corte ahí.
+                  const adcEquipoCorte: Float32Array | null = vendorAdcData[currentSlice] ?? null;
+
                   const handleAddPair = () => {
                     const roi = rois.find(r => r.id === validationRoiId);
                     const res = results[currentSlice];
-                    if (!roi || !res || !meta || !meta.hasVendorAdc) return;
-                    
+                    if (!roi || !res || !meta || !meta.hasVendorAdc || !adcEquipoCorte) return;
+
                     const roiMask = rasterizeRoi(roi, meta.columns, meta.rows);
                     const calcStats = computeRoiStats({ pixels: res.maps.adc, validityMask: res.maps.mask, roiMask });
-                    const vendStats = computeRoiStats({ pixels: vendorAdcData[currentSlice], validityMask: res.maps.mask, roiMask });
+                    const vendStats = computeRoiStats({ pixels: adcEquipoCorte, validityMask: res.maps.mask, roiMask });
                     
                     if (calcStats.n > calcStats.masked && vendStats.n > vendStats.masked) {
                       setValidationPairs([...validationPairs, {
@@ -884,15 +902,19 @@ export default function App() {
                             {allRois.map(r => <option key={r.id} value={r.id}>{r.label}</option>)}
                           </select>
                         </div>
-                        <button 
+                        <button
                           className="bg-[#3a3028] hover:bg-[#4a3f35] text-xs py-1 px-2 rounded text-gray-200 disabled:opacity-50"
                           onClick={handleAddPair}
-                          disabled={!validationRoiId}
+                          disabled={!validationRoiId || !adcEquipoCorte}
                         >
                           {es.validationAddPair}
                         </button>
                       </div>
-                      
+
+                      {!adcEquipoCorte && (
+                        <div className="text-[10px] text-amber-500 leading-snug">{es.validacionSinCorte}</div>
+                      )}
+
                       {validationPairs.length === 0 ? (
                         <div className="text-[10px] text-gray-500 mt-2">{es.validationEmpty}</div>
                       ) : (
@@ -1152,11 +1174,27 @@ export default function App() {
                     const log = {
                       timestamp: new Date().toISOString(),
                       toolVersion: __APP_VERSION__,
+                      diffusionSeries: meta.series?.find((s: any) => s.id === meta.serieElegida)?.descripcion,
+                      // Con qué mapa del equipo se validó y en qué unidad venía: sin
+                      // esto no se puede reconstruir después una tabla de validación.
+                      vendorAdc: meta.adcEquipo
+                        ? {
+                            series: meta.adcEquipo.descripcion,
+                            storedUnit: meta.adcEquipo.unidad,
+                            unitSource: meta.adcEquipo.origenUnidad,
+                            pairing: 'position ±0.5 mm',
+                            slicesWithoutPair: vendorAdcData.filter(d => !d).length,
+                          }
+                        : null,
                       detectedBValues: meta.bValues,
                       selectedBLow: bLow,
                       selectedBHigh: bHigh,
                       targetB: bTarget,
                       multiB: useMultiB,
+                      // QIBA pide registrar el algoritmo de ajuste con cada resultado.
+                      fitAlgorithm: useMultiB
+                        ? `unweighted log-linear least squares (b=${meta.bValues.join(',')})`
+                        : `two-point (b=${bLow},${bHigh})`,
                       registration: registrationMode,
                       noiseThreshold: threshold,
                       sliceCount: meta.sliceCount,
@@ -1226,7 +1264,7 @@ export default function App() {
                 } else if (type === 'R2') {
                   pixels = res.maps.r2;
                 } else if (type === 'VENDOR-ADC') {
-                  pixels = vendorAdcData[currentSlice];
+                  pixels = vendorAdcData[currentSlice] ?? undefined;
                 } else if (type === 'DIFF') {
                   if (res.maps.cdwi && res.registeredSlices[bHigh]) {
                     pixels = new Float32Array(res.maps.cdwi.length);
@@ -1263,6 +1301,7 @@ export default function App() {
                       title={panelOptions.find(o => o.id === type)?.label || type}
                       mapType={type}
                       pixels={pixels}
+                      sinImagen={type === 'VENDOR-ADC' && meta?.hasVendorAdc && !pixels ? es.panelSinCorteEquipo : undefined}
                       mask={res.maps.mask}
                       width={meta?.columns || 256}
                       height={meta?.rows || 256}
