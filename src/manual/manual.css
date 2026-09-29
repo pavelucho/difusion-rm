@@ -1,0 +1,340 @@
+/*
+ * Estilos del manual de uso. El HTML sale del Markdown sin clases, así que se
+ * estiliza por elemento dentro de .manual-contenido. Este archivo no va en ninguna
+ * capa, de modo que se impone al reinicio de estilos de Tailwind.
+ */
+
+.manual-contenido {
+  --texto: #d3ccc3;
+  --titulo: #f3eee8;
+  --tenue: #8e9299;
+  --acento: #f27d26;
+  --borde: #3a3028;
+  --superficie: #2b221c;
+  --codigo: #120f0d;
+
+  max-width: 48rem;
+  color: var(--texto);
+  font-size: 1rem;
+  line-height: 1.7;
+}
+
+.manual-contenido :is(h1, h2, h3, h4) {
+  color: var(--titulo);
+  line-height: 1.25;
+  /* Que la cabecera fija no tape el título al saltar a un ancla. */
+  scroll-margin-top: 4.5rem;
+}
+
+.manual-contenido h1 {
+  font-size: 2.1rem;
+  font-weight: 700;
+  margin: 2.5rem 0 1rem;
+}
+
+.manual-contenido h2 {
+  font-size: 1.5rem;
+  font-weight: 650;
+  margin: 3.25rem 0 1rem;
+  padding-top: 1.75rem;
+  border-top: 1px solid var(--borde);
+}
+
+.manual-contenido h3 {
+  font-size: 1.15rem;
+  font-weight: 600;
+  margin: 2.25rem 0 0.6rem;
+}
+
+.manual-contenido h4 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 1.75rem 0 0.5rem;
+}
+
+.manual-contenido :is(p, ul, ol, pre) {
+  margin: 0 0 1rem;
+}
+
+.manual-contenido ul {
+  list-style: disc;
+  padding-left: 1.4rem;
+}
+
+.manual-contenido ol {
+  list-style: decimal;
+  padding-left: 1.6rem;
+}
+
+.manual-contenido li {
+  margin: 0.3rem 0;
+}
+
+.manual-contenido li::marker {
+  color: var(--tenue);
+}
+
+.manual-contenido li > :is(ul, ol) {
+  margin: 0.3rem 0 0;
+}
+
+.manual-contenido a {
+  color: var(--acento);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+
+.manual-contenido a:hover {
+  text-decoration-thickness: 2px;
+}
+
+.manual-contenido strong {
+  color: var(--titulo);
+  font-weight: 600;
+}
+
+.manual-contenido code,
+.manual-contenido kbd {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.86em;
+}
+
+.manual-contenido code {
+  background: var(--codigo);
+  border: 1px solid var(--borde);
+  border-radius: 4px;
+  padding: 0.1em 0.35em;
+}
+
+.manual-contenido pre {
+  background: var(--codigo);
+  border: 1px solid var(--borde);
+  border-radius: 6px;
+  padding: 0.9rem 1.1rem;
+  overflow-x: auto;
+  line-height: 1.6;
+}
+
+.manual-contenido pre code {
+  background: none;
+  border: 0;
+  padding: 0;
+  font-size: 0.9rem;
+}
+
+.manual-contenido kbd {
+  font-family: inherit;
+  color: var(--titulo);
+  background: var(--superficie);
+  border: 1px solid #5a4a3e;
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  padding: 0.05em 0.4em;
+  white-space: nowrap;
+}
+
+.manual-contenido .tabla-desplazable {
+  overflow-x: auto;
+  margin: 0 0 1.25rem;
+}
+
+.manual-contenido table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+.manual-contenido :is(th, td) {
+  border: 1px solid var(--borde);
+  padding: 0.5rem 0.7rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+.manual-contenido th {
+  background: var(--superficie);
+  color: var(--titulo);
+  font-weight: 600;
+}
+
+.manual-contenido img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 1.5rem 0 0.5rem;
+  border: 1px solid var(--borde);
+  border-radius: 6px;
+}
+
+.manual-contenido hr {
+  border: 0;
+  border-top: 1px solid var(--borde);
+  margin: 2rem 0;
+}
+
+.manual-contenido blockquote {
+  color: var(--tenue);
+  border-left: 3px solid var(--borde);
+  padding: 0.1rem 0 0.1rem 1rem;
+  margin: 0 0 1rem;
+}
+
+/* Avisos: la sintaxis de GitHub «> [!NOTE]», con sus mismos cinco tipos. */
+.manual-contenido .aviso {
+  --color-aviso: var(--tenue);
+  border: 1px solid var(--borde);
+  border-left: 4px solid var(--color-aviso);
+  border-radius: 6px;
+  background: var(--superficie);
+  padding: 0.8rem 1.1rem;
+  margin: 0 0 1.25rem;
+}
+
+.manual-contenido .aviso > :last-child {
+  margin-bottom: 0;
+}
+
+.manual-contenido .aviso-titulo {
+  color: var(--color-aviso);
+  font-weight: 600;
+  margin-bottom: 0.3rem;
+}
+
+.manual-contenido .aviso-consejo { --color-aviso: #34d399; }
+.manual-contenido .aviso-importante { --color-aviso: var(--acento); }
+.manual-contenido .aviso-advertencia { --color-aviso: #f59e0b; }
+.manual-contenido .aviso-precaucion { --color-aviso: #f87171; }
+
+.portada-impresa {
+  display: none;
+}
+
+@media print {
+  @page {
+    margin: 16mm 15mm 18mm;
+
+    /* Donde el navegador admite cajas de margen (Chrome, Edge), numera las páginas. */
+    @bottom-left {
+      content: "Procesador de difusión — Manual de uso";
+      font: 8pt system-ui, sans-serif;
+      color: #666;
+    }
+    @bottom-right {
+      content: counter(page) " / " counter(pages);
+      font: 8pt system-ui, sans-serif;
+      color: #666;
+    }
+  }
+
+  @page :first {
+    @bottom-left { content: none; }
+    @bottom-right { content: none; }
+  }
+
+  /* index.html declara color-scheme oscuro, y con él el lienzo de la página, que
+     es lo que se ve en los márgenes del papel, se imprimía negro. */
+  :root {
+    color-scheme: light;
+  }
+
+  html,
+  body,
+  .pagina-manual {
+    background: #fff !important;
+    color: #111 !important;
+  }
+
+  .manual-contenido {
+    --texto: #1c1c1c;
+    --titulo: #000;
+    --tenue: #555;
+    --acento: #9a3b00;
+    --borde: #b8b8b8;
+    --superficie: #f3f3f3;
+    --codigo: #f6f6f6;
+
+    max-width: none;
+    font-size: 10.5pt;
+    line-height: 1.5;
+  }
+
+  /* El título ya está en la portada. */
+  .manual-contenido h1 {
+    display: none;
+  }
+
+  .manual-contenido h2 {
+    margin-top: 2rem;
+    padding-top: 1rem;
+  }
+
+  .manual-contenido :is(h2, h3, h4) {
+    break-after: avoid;
+  }
+
+  .manual-contenido :is(pre, img, .aviso, tr) {
+    break-inside: avoid;
+  }
+
+  .manual-contenido .tabla-desplazable {
+    overflow: visible;
+  }
+
+  /* En papel no hay desplazamiento: las líneas largas de código se parten. */
+  .manual-contenido pre {
+    overflow: visible;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+
+  /* En papel un enlace no se puede pulsar: se escribe la dirección, salvo que el
+     texto del enlace ya sea la propia dirección. */
+  .manual-contenido a[href^="http"]:not(.url-a-la-vista)::after {
+    content: " (" attr(href) ")";
+    color: var(--tenue);
+    font-size: 0.85em;
+    word-break: break-all;
+  }
+
+  .portada-impresa {
+    display: block;
+    break-after: page;
+    color: #111;
+    padding-top: 30mm;
+  }
+
+  .portada-impresa .portada-app {
+    font-size: 12pt;
+    font-weight: 600;
+    color: #9a3b00;
+  }
+
+  .portada-impresa .portada-titulo {
+    font-size: 30pt;
+    font-weight: 700;
+    line-height: 1.1;
+    margin: 4pt 0 10pt;
+  }
+
+  .portada-impresa :is(.portada-version, .portada-url) {
+    font-size: 10pt;
+    color: #444;
+  }
+
+  .portada-impresa .portada-indice {
+    font-size: 13pt;
+    font-weight: 700;
+    margin: 28mm 0 6pt;
+    padding-top: 8pt;
+    border-top: 1px solid #bbb;
+  }
+
+  .portada-impresa ol {
+    list-style: decimal;
+    padding-left: 18pt;
+    font-size: 10.5pt;
+    line-height: 1.75;
+  }
+}

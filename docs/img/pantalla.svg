@@ -1,0 +1,239 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 600" role="img" aria-labelledby="titulo desc" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+  <title id="titulo">Pantalla de trabajo del Procesador de difusión</title>
+  <desc id="desc">Esquema de la interfaz: barra lateral a la izquierda con la apertura del estudio, los avisos, los parámetros, las pestañas de medida y la exportación; cuatro paneles de imagen a la derecha; y barra inferior con el corte, la b objetivo, la versión, el manual y la cita. Nueve números señalan cada zona.</desc>
+
+  <defs>
+    <!-- Cada panel dibuja la misma anatomía esquemática con los tonos de su mapa:
+         lesión restringida (con ROI), foco brillante en T2 sin restricción y líquido. -->
+    <clipPath id="recorte-panel"><rect width="367" height="277"/></clipPath>
+    <g id="numero">
+      <circle r="11" fill="#38bdf8" stroke="#0b1220" stroke-width="2"/>
+    </g>
+    <!-- Iconos BookOpen y Quote de lucide, los mismos que usa la aplicación. -->
+    <symbol id="icono-libro" viewBox="0 0 24 24" fill="none" stroke="#F27D26" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 7v14"/>
+      <path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/>
+    </symbol>
+    <symbol id="icono-cita" viewBox="0 0 24 24" fill="none" stroke="#F27D26" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M16 3a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2 1 1 0 0 1 1 1v1a2 2 0 0 1-2 2 1 1 0 0 0-1 1v2a1 1 0 0 0 1 1 6 6 0 0 0 6-6V5a2 2 0 0 0-2-2z"/>
+      <path d="M5 3a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2 1 1 0 0 1 1 1v1a2 2 0 0 1-2 2 1 1 0 0 0-1 1v2a1 1 0 0 0 1 1 6 6 0 0 0 6-6V5a2 2 0 0 0-2-2z"/>
+    </symbol>
+  </defs>
+
+  <!-- Fondo -->
+  <rect width="960" height="600" fill="#1A1614"/>
+
+  <!-- ============ Barra lateral ============ -->
+  <rect x="0" y="0" width="214" height="566" fill="#2B221C"/>
+  <line x1="214.5" y1="0" x2="214.5" y2="566" stroke="#3a3028"/>
+
+  <text x="12" y="22" fill="#F27D26" font-size="11.5" font-weight="700">Procesador de difusión —</text>
+  <text x="12" y="37" fill="#F27D26" font-size="11.5" font-weight="700">ADC · eADC · cDWI</text>
+
+  <rect x="12" y="48" width="174" height="21" rx="3" fill="#F27D26"/>
+  <text x="99" y="62" fill="#1A1614" font-size="9" font-weight="700" text-anchor="middle">Abrir carpeta del estudio</text>
+  <text x="99" y="81" fill="#8E9299" font-size="7.5" text-anchor="middle" text-decoration="underline">Abrir un ZIP o archivos sueltos</text>
+  <text x="99" y="94" fill="#6b6f75" font-size="6.8" text-anchor="middle">El estudio se procesa en su navegador.</text>
+  <rect x="12" y="100" width="174" height="17" rx="2.5" fill="#1A1614" stroke="#4a3f35"/>
+  <use href="#icono-libro" x="65" y="104" width="9" height="9"/>
+  <text x="78" y="111.5" fill="#f3f4f6" font-size="7.5" font-weight="700">Manual de uso</text>
+
+  <text x="12" y="130" fill="#8E9299" font-size="7.5">Cortes usables: 20</text>
+  <line x1="12.5" y1="134" x2="12.5" y2="152" stroke="#b45309" stroke-width="1.5"/>
+  <text x="17" y="140" fill="#f59e0b" font-size="6.8">Se está usando la serie «DWI AX». El</text>
+  <text x="17" y="149" fill="#f59e0b" font-size="6.8">estudio contiene 3 series; puede cambiarla…</text>
+
+  <text x="12" y="164" fill="#8E9299" font-size="7.5" font-weight="600">Serie de difusión</text>
+  <rect x="12" y="168" width="174" height="14" rx="2" fill="#1A1614" stroke="#3a3028"/>
+  <text x="16" y="178" fill="#d1d5db" font-size="7">DWI AX — 60 imágenes · b 0, 150, 1000</text>
+
+  <text x="12" y="196" fill="#8E9299" font-size="7.5" font-weight="600">b baja (referencia)</text>
+  <rect x="12" y="200" width="174" height="14" rx="2" fill="#1A1614" stroke="#3a3028"/>
+  <text x="16" y="210" fill="#d1d5db" font-size="7.5">150</text>
+  <text x="12" y="228" fill="#8E9299" font-size="7.5" font-weight="600">b alta</text>
+  <rect x="12" y="232" width="174" height="14" rx="2" fill="#1A1614" stroke="#3a3028"/>
+  <text x="16" y="242" fill="#d1d5db" font-size="7.5">1000</text>
+
+  <rect x="12" y="253" width="8" height="8" rx="1.5" fill="#1A1614" stroke="#8E9299"/>
+  <text x="25" y="260" fill="#8E9299" font-size="7.5">Ajuste por mínimos cuadrados (multi-b)</text>
+
+  <text x="12" y="276" fill="#6b6f75" font-size="6.8">Corregistro</text>
+  <rect x="12" y="279" width="174" height="13" rx="2" fill="#1A1614" stroke="#3a3028"/>
+  <text x="16" y="288.5" fill="#d1d5db" font-size="7">Solo traslación</text>
+  <text x="12" y="301" fill="#6b6f75" font-size="6.3">Corte 8: Δx 0.5 px · Δy -1 px · θ 0°</text>
+
+  <rect x="12" y="308" width="8" height="8" rx="1.5" fill="#F27D26"/>
+  <path d="M13.8 312 L15.6 314 L18.4 310" fill="none" stroke="#1A1614" stroke-width="1.2"/>
+  <text x="25" y="315" fill="#8E9299" font-size="7.5">Sincronizar zoom y desplazamiento</text>
+  <rect x="12" y="322" width="174" height="13" rx="2" fill="#1A1614" stroke="#3a3028"/>
+  <text x="16" y="331.5" fill="#d1d5db" font-size="7">Restablecer todas las ventanas</text>
+
+  <text x="12" y="350" fill="#8E9299" font-size="7.5" font-weight="600">ADC de referencia para la ventana</text>
+  <line x1="12" y1="358" x2="170" y2="358" stroke="#3a3028" stroke-width="3" stroke-linecap="round"/>
+  <line x1="12" y1="358" x2="42" y2="358" stroke="#F27D26" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="42" cy="358" r="4" fill="#F27D26"/>
+  <text x="186" y="360.5" fill="#8E9299" font-size="7" text-anchor="end">1.0</text>
+  <text x="12" y="376" fill="#8E9299" font-size="7.5" font-weight="600">Umbral de ruido: 32.0</text>
+  <line x1="12" y1="384" x2="186" y2="384" stroke="#3a3028" stroke-width="3" stroke-linecap="round"/>
+  <line x1="12" y1="384" x2="52" y2="384" stroke="#F27D26" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="52" cy="384" r="4" fill="#F27D26"/>
+
+  <line x1="12" y1="397.5" x2="202" y2="397.5" stroke="#3a3028"/>
+  <text x="30" y="413" fill="#F27D26" font-size="7.5" font-weight="700" text-anchor="middle">ROI</text>
+  <text x="75" y="413" fill="#6b6f75" font-size="7.5" font-weight="600" text-anchor="middle">Contraste</text>
+  <text x="124" y="413" fill="#6b6f75" font-size="7.5" font-weight="600" text-anchor="middle">Validación</text>
+  <text x="170" y="413" fill="#6b6f75" font-size="7.5" font-weight="600" text-anchor="middle">Fidelidad</text>
+  <line x1="12" y1="419.5" x2="202" y2="419.5" stroke="#3a3028"/>
+  <line x1="14" y1="419.5" x2="46" y2="419.5" stroke="#F27D26" stroke-width="2"/>
+
+  <rect x="12" y="426" width="55" height="13" rx="2" fill="none" stroke="#3a3028"/>
+  <text x="39.5" y="435.5" fill="#d1d5db" font-size="7" text-anchor="middle">Círculo</text>
+  <rect x="71.5" y="426" width="55" height="13" rx="2" fill="none" stroke="#3a3028"/>
+  <text x="99" y="435.5" fill="#d1d5db" font-size="7" text-anchor="middle">Elipse</text>
+  <rect x="131" y="426" width="55" height="13" rx="2" fill="none" stroke="#3a3028"/>
+  <text x="158.5" y="435.5" fill="#d1d5db" font-size="7" text-anchor="middle">Polígono</text>
+
+  <rect x="12" y="446" width="174" height="26" rx="2" fill="#1A1614" stroke="#3a3028"/>
+  <circle cx="20" cy="454" r="3" fill="#00ff00"/>
+  <text x="27" y="456.5" fill="#f3f4f6" font-size="7.2">Lesión</text>
+  <text x="180" y="456.5" fill="#6b6f75" font-size="7.2" text-anchor="end">✕</text>
+  <rect x="17" y="461" width="24" height="8" rx="1" fill="#2B221C" stroke="#3a3028"/>
+  <text x="29" y="467" fill="#8E9299" font-size="5" text-anchor="middle">Lesión</text>
+  <rect x="44" y="461" width="30" height="8" rx="1" fill="#2B221C" stroke="#3a3028"/>
+  <text x="59" y="467" fill="#8E9299" font-size="5" text-anchor="middle">Referencia</text>
+  <rect x="77" y="461" width="22" height="8" rx="1" fill="#2B221C" stroke="#3a3028"/>
+  <text x="88" y="467" fill="#8E9299" font-size="5" text-anchor="middle">Fondo</text>
+
+  <text x="12" y="485" fill="#6b6f75" font-size="6.3">Estadísticas en: Mapa ADC</text>
+  <line x1="12" y1="489.5" x2="186" y2="489.5" stroke="#3a3028"/>
+  <text x="12" y="496" fill="#6b6f75" font-size="5.6">Etiqueta   Vóxeles   Enmasc.   Media (10⁻³ mm²/s)</text>
+  <line x1="12" y1="499.5" x2="186" y2="499.5" stroke="#3a3028"/>
+  <circle cx="15" cy="505" r="2" fill="#00ff00"/>
+  <text x="20" y="507" fill="#d1d5db" font-size="5.8">Lesión       135        0 (0%)        <tspan fill="#F27D26">0.652</tspan></text>
+
+  <line x1="12" y1="516.5" x2="202" y2="516.5" stroke="#3a3028"/>
+  <rect x="12" y="523" width="174" height="15" rx="2" fill="#3a3028"/>
+  <text x="99" y="533.5" fill="#e5e7eb" font-size="7.2" text-anchor="middle">Exportar mapas DICOM</text>
+  <rect x="12" y="543" width="174" height="15" rx="2" fill="#3a3028"/>
+  <text x="99" y="553.5" fill="#e5e7eb" font-size="7.2" text-anchor="middle">Descargar registro de procesamiento</text>
+
+  <!-- ============ Paneles ============ -->
+  <rect x="215" y="0" width="745" height="566" fill="#000"/>
+
+  <!-- Panel 1: b alta adquirida -->
+  <g transform="translate(219 4)">
+    <rect width="367" height="277" fill="#000" stroke="#3a3028"/>
+    <g clip-path="url(#recorte-panel)">
+      <ellipse cx="183" cy="142" rx="118" ry="98" fill="#5f5f5f"/>
+      <ellipse cx="183" cy="197" rx="30" ry="18" fill="#262626"/>
+      <circle cx="224" cy="112" r="15" fill="#b8b8b8"/>
+      <circle cx="146" cy="134" r="19" fill="#e6e6e6"/>
+      <circle cx="146" cy="134" r="23" fill="none" stroke="#00ff00" stroke-width="1.2"/>
+      <text x="152" y="106" fill="#00ff00" font-size="8">Lesión</text>
+    </g>
+    <rect x="0" y="0" width="90" height="18" fill="#000" fill-opacity="0.6"/>
+    <text x="7" y="12.5" fill="#F27D26" font-size="8.5" font-weight="600">b alta adquirida</text>
+    <rect x="270" y="4" width="93" height="13" rx="2" fill="#000" stroke="#3a3028"/>
+    <text x="275" y="13.5" fill="#F27D26" font-size="7.5">b alta adquirida ▾</text>
+    <rect x="245" y="260" width="122" height="17" fill="#000" fill-opacity="0.6"/>
+    <text x="251" y="271.5" fill="#F27D26" font-size="7.5" font-weight="600">Nivel: <tspan fill="#9ca3af" font-weight="400">250</tspan>   Ancho: <tspan fill="#9ca3af" font-weight="400">500</tspan></text>
+  </g>
+
+  <!-- Panel 2: DWI calculada -->
+  <g transform="translate(590 4)">
+    <rect width="367" height="277" fill="#000" stroke="#3a3028"/>
+    <g clip-path="url(#recorte-panel)">
+      <ellipse cx="183" cy="142" rx="118" ry="98" fill="#3e3e3e"/>
+      <ellipse cx="183" cy="197" rx="30" ry="18" fill="#0b0b0b"/>
+      <circle cx="224" cy="112" r="15" fill="#6e6e6e"/>
+      <circle cx="146" cy="134" r="19" fill="#f5f5f5"/>
+      <circle cx="146" cy="134" r="23" fill="none" stroke="#00ff00" stroke-width="1.2"/>
+      <text x="152" y="106" fill="#00ff00" font-size="8">Lesión</text>
+    </g>
+    <rect x="0" y="0" width="80" height="18" fill="#000" fill-opacity="0.6"/>
+    <text x="7" y="12.5" fill="#F27D26" font-size="8.5" font-weight="600">DWI calculada</text>
+    <rect x="270" y="4" width="93" height="13" rx="2" fill="#000" stroke="#3a3028"/>
+    <text x="275" y="13.5" fill="#F27D26" font-size="7.5">DWI calculada ▾</text>
+    <rect x="245" y="260" width="122" height="17" fill="#000" fill-opacity="0.6"/>
+    <text x="251" y="271.5" fill="#F27D26" font-size="7.5" font-weight="600">Nivel: <tspan fill="#9ca3af" font-weight="400">117</tspan>   Ancho: <tspan fill="#9ca3af" font-weight="400">234</tspan></text>
+  </g>
+
+  <!-- Panel 3: Mapa ADC -->
+  <g transform="translate(219 285)">
+    <rect width="367" height="277" fill="#000" stroke="#3a3028"/>
+    <g clip-path="url(#recorte-panel)">
+      <ellipse cx="183" cy="142" rx="118" ry="98" fill="#8a8a8a"/>
+      <ellipse cx="183" cy="197" rx="30" ry="18" fill="#f2f2f2"/>
+      <circle cx="224" cy="112" r="15" fill="#969696"/>
+      <circle cx="146" cy="134" r="19" fill="#383838"/>
+      <circle cx="146" cy="134" r="23" fill="none" stroke="#00ff00" stroke-width="1.2"/>
+      <text x="152" y="106" fill="#00ff00" font-size="8">Lesión</text>
+    </g>
+    <rect x="0" y="0" width="64" height="18" fill="#000" fill-opacity="0.6"/>
+    <text x="7" y="12.5" fill="#F27D26" font-size="8.5" font-weight="600">Mapa ADC</text>
+    <rect x="270" y="4" width="93" height="13" rx="2" fill="#000" stroke="#3a3028"/>
+    <text x="275" y="13.5" fill="#F27D26" font-size="7.5">Mapa ADC ▾</text>
+    <g font-size="6.5" fill="#d1d5db" text-anchor="middle">
+      <rect x="252" y="23" width="35" height="11" rx="2" fill="#000" fill-opacity="0.6"/>
+      <text x="269.5" y="31">0-2000</text>
+      <rect x="290" y="23" width="35" height="11" rx="2" fill="#000" fill-opacity="0.6"/>
+      <text x="307.5" y="31">0-3000</text>
+      <rect x="328" y="23" width="35" height="11" rx="2" fill="#000" fill-opacity="0.6"/>
+      <text x="345.5" y="31">0-4000</text>
+    </g>
+    <rect x="215" y="260" width="152" height="17" fill="#000" fill-opacity="0.6"/>
+    <text x="220" y="271.5" fill="#F27D26" font-size="7.5" font-weight="600">Nivel: <tspan fill="#9ca3af" font-weight="400">1500</tspan>  Ancho: <tspan fill="#9ca3af" font-weight="400">3000</tspan> <tspan fill="#9ca3af" font-weight="400" font-size="6.5">(10⁻⁶ mm²/s)</tspan></text>
+  </g>
+
+  <!-- Panel 4: Mapa eADC -->
+  <g transform="translate(590 285)">
+    <rect width="367" height="277" fill="#000" stroke="#3a3028"/>
+    <g clip-path="url(#recorte-panel)">
+      <ellipse cx="183" cy="142" rx="118" ry="98" fill="#383838"/>
+      <ellipse cx="183" cy="197" rx="30" ry="18" fill="#060606"/>
+      <circle cx="224" cy="112" r="15" fill="#2f2f2f"/>
+      <circle cx="146" cy="134" r="19" fill="#cdcdcd"/>
+      <circle cx="146" cy="134" r="23" fill="none" stroke="#00ff00" stroke-width="1.2"/>
+      <text x="152" y="106" fill="#00ff00" font-size="8">Lesión</text>
+    </g>
+    <rect x="0" y="0" width="66" height="18" fill="#000" fill-opacity="0.6"/>
+    <text x="7" y="12.5" fill="#F27D26" font-size="8.5" font-weight="600">Mapa eADC</text>
+    <rect x="270" y="4" width="93" height="13" rx="2" fill="#000" stroke="#3a3028"/>
+    <text x="275" y="13.5" fill="#F27D26" font-size="7.5">Mapa eADC ▾</text>
+    <rect x="245" y="260" width="122" height="17" fill="#000" fill-opacity="0.6"/>
+    <text x="251" y="271.5" fill="#F27D26" font-size="7.5" font-weight="600">Nivel: <tspan fill="#9ca3af" font-weight="400">0.500</tspan> Ancho: <tspan fill="#9ca3af" font-weight="400">1.000</tspan></text>
+  </g>
+
+  <!-- ============ Barra inferior ============ -->
+  <rect x="0" y="566" width="960" height="34" fill="#2B221C"/>
+  <line x1="0" y1="566.5" x2="960" y2="566.5" stroke="#3a3028"/>
+  <text x="12" y="586" fill="#8E9299" font-size="7.5" font-weight="600">Corte 8 / 20</text>
+  <line x1="66" y1="583" x2="170" y2="583" stroke="#3a3028" stroke-width="3" stroke-linecap="round"/>
+  <line x1="66" y1="583" x2="104" y2="583" stroke="#F27D26" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="104" cy="583" r="4" fill="#F27D26"/>
+  <text x="196" y="586" fill="#8E9299" font-size="7.5" font-weight="600">b objetivo (cDWI): 2000</text>
+  <line x1="296" y1="583" x2="400" y2="583" stroke="#3a3028" stroke-width="3" stroke-linecap="round"/>
+  <line x1="296" y1="583" x2="365" y2="583" stroke="#F27D26" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="365" cy="583" r="4" fill="#F27D26"/>
+  <text x="760" y="580" fill="#6b6f75" font-size="6" text-anchor="end">Herramienta de investigación. No es un dispositivo médico.</text>
+  <text x="760" y="590" fill="#6b6f75" font-size="6" text-anchor="end">v1.x · fecha</text>
+  <rect x="793" y="574" width="81" height="18" rx="2.5" fill="#1A1614" stroke="#4a3f35"/>
+  <use href="#icono-libro" x="799" y="578.5" width="9" height="9"/>
+  <text x="812" y="586" fill="#f3f4f6" font-size="7.5" font-weight="700">Manual de uso</text>
+  <rect x="880" y="574" width="68" height="18" rx="2.5" fill="#1A1614" stroke="#4a3f35"/>
+  <use href="#icono-cita" x="886" y="578.5" width="9" height="9"/>
+  <text x="899" y="586" fill="#f3f4f6" font-size="7.5" font-weight="700">Cómo citar</text>
+
+  <!-- ============ Números ============ -->
+  <g font-size="12" font-weight="700" fill="#0b1220" text-anchor="middle">
+    <use href="#numero" x="201" y="58"/><text x="201" y="62.2">1</text>
+    <use href="#numero" x="201" y="141"/><text x="201" y="145.2">2</text>
+    <use href="#numero" x="201" y="228"/><text x="201" y="232.2">3</text>
+    <use href="#numero" x="201" y="432"/><text x="201" y="436.2">4</text>
+    <use href="#numero" x="201" y="540"/><text x="201" y="544.2">5</text>
+    <use href="#numero" x="474" y="14"/><text x="474" y="18.2">6</text>
+    <use href="#numero" x="449" y="272"/><text x="449" y="276.2">7</text>
+    <use href="#numero" x="424" y="583"/><text x="424" y="587.2">8</text>
+    <use href="#numero" x="778" y="583"/><text x="778" y="587.2">9</text>
+  </g>
+</svg>

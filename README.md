@@ -2,7 +2,8 @@
 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.22714640.svg)](https://doi.org/10.5281/zenodo.22714640)
 
-**En línea: https://difusion-rm.pages.dev**
+**En línea: https://difusion-rm.pages.dev** · **Manual de uso: https://difusion-rm.pages.dev/manual**
+(también en [`docs/manual-usuario.md`](docs/manual-usuario.md))
 
 Aplicación web para post-procesado de resonancia magnética de difusión. Calcula mapas
 ADC, eADC y DWI computada (cDWI) a partir de una serie DICOM de difusión.
@@ -108,6 +109,10 @@ estudio*. Los archivos sin extensión, como los que traen muchos CD, también va
 4. **Exportar** los mapas como serie DICOM en un ZIP, o descargar el registro de
    procesamiento en JSON para trazabilidad.
 
+El [manual de uso](docs/manual-usuario.md) explica cada paso, cada parámetro y cada
+aviso. Quien usa la herramienta lo abre desde la propia aplicación, con el botón
+*Manual de uso*, y puede imprimirlo o guardarlo en PDF desde su página.
+
 ## Fórmulas (ajuste de dos puntos)
 
 **ADC** — coeficiente de difusión aparente:
@@ -165,16 +170,31 @@ Los mapas derivados siguen las convenciones habituales de fabricante:
 ## Estructura
 
 ```
+docs/
+  manual-usuario.md manual de uso (la aplicación lo sirve en /manual)
+  img/              figuras del manual
 src/
   lib/diffusion/    lectura y escritura DICOM, mapas, corregistro, estadística
   lib/roi.ts        regiones de interés y rasterizado
   components/       paneles de visualización
+  manual/           página del manual y su conversión de Markdown
   i18n/es.ts        todo el texto de la interfaz
   App.tsx           composición de la interfaz
 ```
 
 El cálculo pesado vive en un Web Worker (`src/lib/diffusion/worker.ts`), de modo que la
 interfaz no se bloquea con series grandes.
+
+### El manual de uso
+
+Se escribe en `docs/manual-usuario.md` y es lo único que hay que editar: la página
+`/manual` se genera de ese archivo al compilar (`src/manual/markdown.ts`), sin cargar
+ningún intérprete de Markdown en el navegador. Admite lo habitual de GitHub, incluidos
+los avisos `> [!NOTE]`, `> [!TIP]`, `> [!IMPORTANT]`, `> [!WARNING]` y `> [!CAUTION]`, y
+las imágenes van en `docs/img/` con ruta relativa. `npm test` comprueba que cada enlace
+interno lleva a un título que existe y que cada imagen está en su sitio.
+
+Cuando cambie algo que se ve en la interfaz, actualice el manual en el mismo cambio.
 
 ## Verificación con estudios reales
 
