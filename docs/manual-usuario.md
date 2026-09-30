@@ -207,9 +207,10 @@ Al abrir el estudio, la aplicación calcula como el equipo y como las guías (PI
 - Con **tres o más**, [ajuste multi-b](#ajuste-multi-b) con todos ellos.
 - La **b baja** es el menor valor b de la serie y la **b alta**, el mayor.
 
-Los protocolos ya ponen su b menor donde la piden las guías: 0 s/mm² en cerebro y mama,
-50–100 s/mm² en el cuerpo. Con estos valores por defecto, el ADC calculado es comparable
-con el del equipo y con los umbrales publicados.
+Los protocolos ya ponen su b menor donde la piden las guías: 0 s/mm² en cerebro [[7]](#referencias),
+0 o 50 s/mm² en mama [[8]](#referencias) y 50–100 s/mm² en la próstata [[6]](#referencias). Con estos valores
+por defecto, el ADC calculado es comparable con el del equipo y con los umbrales
+publicados [[9]](#referencias).
 
 ### b baja y b alta
 
@@ -223,10 +224,10 @@ eligen en sus desplegables entre los valores b de la serie, en s/mm².
   imagen se muestra como *b alta adquirida*.
 
 Con una b de 100 s/mm² o menos en el cálculo, el ADC recoge algo de perfusión capilar
-(efecto IVIM) [[8]](#referencias), que lo eleva, sobre todo en órganos muy vascularizados como el hígado o el
-riñón; en el cerebro es despreciable. Así lo calculan el equipo y las guías. Cuando la
+(efecto IVIM) [[10]](#referencias), que lo eleva, sobre todo en órganos muy vascularizados como el hígado o el
+riñón; en el cerebro es despreciable [[11]](#referencias). Así lo calculan el equipo y las guías. Cuando la
 serie permite otra elección, una nota gris bajo *b baja* lo recuerda. Para un ADC con menos
-perfusión, uso propio de la investigación, desmarque el multi-b y elija una b baja mayor
+perfusión, uso propio de la investigación [[12]](#referencias), desmarque el multi-b y elija una b baja mayor
 de 100 s/mm²: los valores dejarán de ser comparables con los del equipo y con los
 umbrales publicados.
 
@@ -240,20 +241,21 @@ ajuste (R²)**.
 
 - Es el ajuste que usan los equipos y el software de referencia de QIBA [[9]](#referencias). Hasta la
   versión 1.2, cada punto se ponderaba con el cuadrado de su señal medida: esa ponderación
-  arrastra el ruido de la medida [[10]](#referencias) y, en los estudios de cuerpo de Siemens, daba un ADC un 10 % más
+  arrastra el ruido de la medida [[13]](#referencias) y, en los estudios de cuerpo de Siemens, daba un ADC un 10 % más
   alto que el del equipo.
 - Usa todos los valores b, incluido b = 0 si la serie lo tiene.
 - La b baja elegida sigue siendo la referencia del corregistro: las demás imágenes se
   alinean con ella.
 - La b alta elegida solo decide qué imagen se muestra como *b alta adquirida* y con cuál
   se compara la [fidelidad](#fidelidad-de-la-dwi-calculada).
-- La cDWI se calcula desde la señal ajustada en b = 0, no desde la señal medida en b baja.
+- La cDWI se calcula desde la señal ajustada en b = 0, no desde la señal medida en b baja
+  [[4]](#referencias).
 - El eADC usa el mayor valor b de la serie.
 
 ### Corregistro
 
 Alinea en cada corte la imagen de b alta (con multi-b, la de cada valor b) con la de b
-baja, para corregir pequeños movimientos entre adquisiciones. Usa información mutua [[11]](#referencias) y
+baja, para corregir pequeños movimientos entre adquisiciones. Usa información mutua [[14]](#referencias) y
 busca dentro de ±8 píxeles y, si incluye rotación, de ±3°.
 
 | Modo | Qué corrige |
@@ -268,7 +270,7 @@ aplica un modo más simple, con un aviso en ámbar: *Corte n: solución rechazad
 …*.
 
 El corregistro es dentro del plano de cada corte: no corrige el movimiento entre cortes ni
-la distorsión geométrica propia de la secuencia de difusión.
+la distorsión geométrica propia de la secuencia de difusión [[15]](#referencias).
 
 ### Umbral de ruido y máscara
 
@@ -281,9 +283,9 @@ Para no calcular ADC sobre ruido, los mapas llevan una **máscara**. Un vóxel e
 Los vóxeles que no cumplen se ven negros en todos los mapas, no cuentan en las
 estadísticas y se exportan con valor 0.
 
-El umbral inicial se estima del fondo de la imagen: la media más tres desviaciones
-estándar de cuatro cuadrados de 16 × 16 píxeles, en las esquinas de la imagen de b baja
-del corte central. El deslizador **Umbral de ruido** permite moverlo entre la mitad y cinco
+El umbral inicial se estima del fondo de la imagen [[16]](#referencias): la media más tres
+desviaciones estándar de cuatro cuadrados de 16 × 16 píxeles, en las esquinas de la imagen
+de b baja del corte central. El deslizador **Umbral de ruido** permite moverlo entre la mitad y cinco
 veces ese valor; el cambio se aplica **al soltar el mouse**.
 
 - Súbalo si quedan puntos de ruido fuera del paciente.
@@ -295,11 +297,12 @@ paciente, el umbral estimado sale alto: compruebe que la máscara no recorta tej
 ### b objetivo
 
 El deslizador **b objetivo (cDWI)** de la barra inferior fija el valor b al que se calcula
-la DWI: de 0 a 3000 s/mm², en pasos de 50, con 2000 por defecto. Puede ser mayor que la b
-alta adquirida, que es lo habitual (se extrapola), o menor (se interpola).
+la DWI: de 0 a 3000 s/mm², en pasos de 50, con 2000 por defecto [[3,5]](#referencias). Puede
+ser mayor que la b alta adquirida, que es lo habitual (se extrapola), o menor (se
+interpola).
 
 Por encima de 2000 s/mm² aparece un aviso: el modelo monoexponencial deja de describir
-bien la señal y el ruido se amplifica [[4]](#referencias). Interprete esas imágenes con cautela.
+bien la señal [[17,18]](#referencias) y el ruido se amplifica [[4]](#referencias). Interprete esas imágenes con cautela.
 
 ### Ajustes de visualización
 
@@ -327,16 +330,16 @@ lo que muestra:
 | --- | --- | --- |
 | **b baja** | Imagen adquirida en la b de referencia | Base del cálculo y de la máscara |
 | **b alta adquirida** | Imagen adquirida en la b alta, ya corregistrada | La restricción se ve brillante, pero también lo muy brillante en T2 |
-| **Mapa ADC** | Coeficiente de difusión aparente | La restricción se ve **oscura**; el líquido, brillante |
-| **Mapa eADC** | exp(−b · ADC) | La restricción se ve **brillante**, sin el brillo heredado del T2 |
-| **DWI calculada** | DWI estimada a la b objetivo | La restricción destaca más cuanto más alta es la b objetivo |
+| **Mapa ADC** | Coeficiente de difusión aparente | La restricción se ve **oscura**; el líquido, brillante [[15]](#referencias) |
+| **Mapa eADC** | exp(−b · ADC) | La restricción se ve **brillante**, sin el brillo heredado del T2 [[2]](#referencias) |
+| **DWI calculada** | DWI estimada a la b objetivo | La restricción destaca más cuanto más alta es la b objetivo [[3]](#referencias) |
 | **Bondad de ajuste (R²)** | Calidad del ajuste en cada vóxel, de 0 a 1 | Solo con ajuste multi-b; sin él, el panel queda negro |
 | **ADC del equipo** | Mapa ADC calculado por el equipo, en la misma escala que el calculado | Solo si el estudio lo trae. Muestra el corte del equipo a la misma altura; si no lo hay, lo dice |
 | **Diferencia (calculada − adquirida)** | DWI calculada menos b alta adquirida | Con b objetivo = b alta, muestra dónde el modelo no reproduce la imagen |
 
 > [!TIP]
 > Una lesión brillante en la DWI, con ADC bajo y eADC brillante, sugiere restricción
-> verdadera. Si es brillante en la DWI pero su ADC no es bajo y el eADC no la resalta, el
+> verdadera [[15]](#referencias). Si es brillante en la DWI pero su ADC no es bajo y el eADC no la resalta, el
 > brillo viene del T2 (*T2 shine-through*) [[2]](#referencias).
 
 ### Moverse por el estudio
@@ -451,9 +454,9 @@ corte actual.
 2. Elíjalas en *ROI de lesión*, *ROI de referencia* y *ROI de fondo*.
 3. La tabla da, para la DWI adquirida (b alta), la DWI calculada a la b objetivo actual,
    el ADC y el eADC:
-   - **CR** (contraste relativo) = (media de la lesión − media de la referencia) /
+   - **CR** (contraste relativo) [[5]](#referencias) = (media de la lesión − media de la referencia) /
      |media de la referencia|
-   - **CNR** (relación contraste-ruido) = (media de la lesión − media de la referencia) /
+   - **CNR** (relación contraste-ruido) [[4]](#referencias) = (media de la lesión − media de la referencia) /
      DE del fondo
 
    La fila con el CNR más alto se resalta en naranja.
@@ -503,12 +506,12 @@ vacío con el aviso *El equipo no tiene corte a esta altura*. Cambie de corte.
 
 Con dos o más pares aparecen:
 
-- el **coeficiente de concordancia de Lin** [[12]](#referencias) (1 es concordancia perfecta);
+- el **coeficiente de concordancia de Lin** [[19]](#referencias) (1 es concordancia perfecta);
 - el **sesgo medio**: la media de ADC calculado − ADC del equipo;
 - los **límites de concordancia del 95 %**, mostrados como su semiamplitud (± 1,96 DE de
   las diferencias): los límites son el sesgo más y menos ese valor;
 - un **diagrama de dispersión** con la línea de identidad y un **gráfico de Bland-Altman**
-  [[13]](#referencias).
+  [[20]](#referencias).
 
 **Exportar CSV** descarga `validacion_adc.csv` con todos los pares, con los ADC en mm²/s.
 El archivo no identifica al paciente: si reúne varios estudios, anote a cuál corresponde
@@ -528,7 +531,8 @@ DICOM. Téngalo en cuenta al interpretar el sesgo.
 
 La pestaña **Fidelidad** comprueba si la DWI calculada reproduce la imagen adquirida. Al
 pulsar **Comprobar fidelidad**, la b objetivo pasa a valer lo mismo que la b alta y, en el
-corte actual y dentro de la máscara, se compara la DWI calculada con la adquirida:
+corte actual y dentro de la máscara, se compara la DWI calculada con la adquirida
+[[3,4]](#referencias):
 
 - **Error absoluto medio**, en unidades de señal del equipo.
 - **Correlación** entre las dos imágenes.
@@ -602,30 +606,30 @@ Las pestañas **Contraste** y **Validación** exportan sus tablas en CSV (`contr
 ### Buenas prácticas
 
 - Compare siempre los mapas con las imágenes adquiridas: un mapa derivado no aporta
-  información que no estuviera en ellas.
+  información que no estuviera en ellas [[15]](#referencias).
 - Lea los avisos en ámbar antes de medir, sobre todo los de valores b deducidos o no
   encontrados.
 - Para comparar con el equipo o con umbrales publicados, calcule con los valores por
-  defecto, que son los del protocolo.
-- Para interpretar, mantenga la b objetivo en 2000 s/mm² o menos.
+  defecto, que son los del protocolo [[9]](#referencias).
+- Para interpretar, mantenga la b objetivo en 2000 s/mm² o menos [[4]](#referencias).
 - Vigile el porcentaje de vóxeles enmascarados de cada ROI.
 - En un trabajo con varios pacientes, use los mismos parámetros en todos y guarde el
-  registro de procesamiento de cada uno.
+  registro de procesamiento de cada uno [[7,12]](#referencias).
 - Si publica resultados, cite la versión exacta con la que calculó (vea
   [Cómo citar](#cómo-citar)).
 
 ### Limitaciones
 
 - **Modelo monoexponencial.** Es razonable hasta b ≈ 2000 s/mm²; por encima, la señal se
-  aparta del modelo y el ruido se amplifica.
+  aparta del modelo [[17,18,21]](#referencias) y el ruido se amplifica [[4]](#referencias).
 - **Microperfusión (IVIM).** Con b de 100 s/mm² o menos, el ADC incluye algo de perfusión
-  capilar y sale más alto en órganos muy vascularizados [[8]](#referencias). Es la convención del equipo y de
+  capilar y sale más alto en órganos muy vascularizados [[10,11]](#referencias). Es la convención del equipo y de
   las guías, pero hay que tenerla presente al comparar con estudios que la eviten.
 - **Suelo de ruido.** En zonas de señal muy baja, el ruido de las imágenes de magnitud
-  queda rectificado [[14]](#referencias). La máscara lo mitiga, pero no puede quitar el suelo que ya está en
+  queda rectificado [[16]](#referencias). La máscara lo mitiga, pero no puede quitar el suelo que ya está en
   las imágenes adquiridas.
 - **Corregistro en el plano.** No corrige el movimiento entre cortes ni la distorsión
-  geométrica.
+  geométrica [[15]](#referencias).
 - **Sin memoria entre sesiones.** Las ROI y las tablas se pierden al recargar la página.
 - **No apta por sí sola para decisiones clínicas.** Es una herramienta de investigación,
   no un dispositivo médico certificado.
@@ -665,30 +669,33 @@ que detienen el cálculo.
 ## Glosario
 
 - **ADC** (coeficiente de difusión aparente): cuánto difunde el agua en cada vóxel, en
-  mm²/s. La difusión restringida da un ADC bajo.
+  mm²/s. La difusión restringida da un ADC bajo [[1,15]](#referencias).
 - **eADC** (ADC exponencial): exp(−b · ADC). Muestra la restricción brillante, sin el
-  efecto T2.
-- **cDWI** (DWI calculada): imagen de difusión estimada a una b que no se adquirió.
+  efecto T2 [[2]](#referencias).
+- **cDWI** (DWI calculada): imagen de difusión estimada a una b que no se adquirió
+  [[3]](#referencias).
 - **Valor b**: grado de ponderación en difusión de una imagen, en s/mm².
 - **b baja, b alta, b objetivo**: la b de referencia, la b mayor del cálculo y la b a la
   que se calcula la cDWI.
 - **IVIM** (movimiento incoherente intravóxel): con b bajas, la microperfusión capilar
-  hace caer la señal además de la difusión.
-- **T2 shine-through**: brillo en la DWI debido a un T2 largo y no a restricción.
+  hace caer la señal además de la difusión [[10]](#referencias).
+- **T2 shine-through**: brillo en la DWI debido a un T2 largo y no a restricción
+  [[2]](#referencias).
 - **Máscara**: conjunto de vóxeles que se consideran válidos para el cálculo.
 - **ROI**: región de interés.
 - **CR y CNR**: contraste relativo y relación contraste-ruido.
 - **R²**: bondad del ajuste del modelo en cada vóxel; 1 es un ajuste perfecto.
 - **Coeficiente de concordancia de Lin**: mide cuánto coinciden dos medidas de lo mismo;
-  1 es coincidencia perfecta.
-- **Bland-Altman**: gráfico de la diferencia entre dos medidas frente a su media.
-- **Corregistro**: alineación de imágenes adquiridas en momentos distintos.
+  1 es coincidencia perfecta [[19]](#referencias).
+- **Bland-Altman**: gráfico de la diferencia entre dos medidas frente a su media [[20]](#referencias).
+- **Corregistro**: alineación de imágenes adquiridas en momentos distintos [[14]](#referencias).
 - **DICOM**: formato estándar de las imágenes médicas.
 - **PACS**: sistema de archivo y distribución de imágenes del hospital.
 
 ## Fórmulas
 
-Ajuste de dos puntos, con S_baja y S_alta las señales en b_baja y b_alta:
+Ajuste de dos puntos [[1–3]](#referencias), con S_baja y S_alta las señales
+en b_baja y b_alta:
 
 ```
 ADC  = ln(S_baja / S_alta) / (b_alta − b_baja)
@@ -700,7 +707,7 @@ El eADC se calcula a partir del ADC, no como S_alta / S_baja: las dos expresione
 coinciden solo si la b baja es 0.
 
 Ajuste multi-b: recta de mínimos cuadrados ordinarios, sin ponderar, de ln S frente a b,
-con todos los valores b de la serie. R² es el coeficiente de determinación de ese ajuste.
+con todos los valores b de la serie [[9,13]](#referencias). R² es el coeficiente de determinación de ese ajuste.
 
 ```
 ln S(b) = ln S₀ − b · ADC
@@ -708,7 +715,8 @@ cDWI    = S₀ · exp(−b_objetivo · ADC)
 eADC    = exp(−b_máx · ADC)
 ```
 
-Contraste y concordancia, con LC95 los límites de concordancia del 95 %:
+Contraste [[4,5]](#referencias) y concordancia [[19,20]](#referencias), con LC95 los límites de concordancia
+del 95 %:
 
 ```
 CR    = (media_lesión − media_referencia) / |media_referencia|
@@ -736,10 +744,17 @@ En formato Vancouver, numeradas por orden de aparición en el texto.
 5. Ueno Y, Takahashi S, Kitajima K, Kimura T, Aoki I, Kawakami F, et al. Computed diffusion-weighted imaging using 3-T magnetic resonance imaging for prostate cancer diagnosis. Eur Radiol. 2013;23(12):3509-16. doi:[10.1007/s00330-013-2958-z](https://doi.org/10.1007/s00330-013-2958-z)
 6. Turkbey B, Rosenkrantz AB, Haider MA, Padhani AR, Villeirs G, Macura KJ, et al. Prostate Imaging Reporting and Data System Version 2.1: 2019 update of Prostate Imaging Reporting and Data System Version 2. Eur Urol. 2019;76(3):340-51. doi:[10.1016/j.eururo.2019.02.033](https://doi.org/10.1016/j.eururo.2019.02.033)
 7. Shukla-Dave A, Obuchowski NA, Chenevert TL, Jambawalikar S, Schwartz LH, Malyarenko D, et al. Quantitative imaging biomarkers alliance (QIBA) recommendations for improved precision of DWI and DCE-MRI derived biomarkers in multicenter oncology trials. J Magn Reson Imaging. 2019;49(7):e101-21. doi:[10.1002/jmri.26518](https://doi.org/10.1002/jmri.26518)
-8. Le Bihan D, Breton E, Lallemand D, Aubin ML, Vignaud J, Laval-Jeantet M. Separation of diffusion and perfusion in intravoxel incoherent motion MR imaging. Radiology. 1988;168(2):497-505. doi:[10.1148/radiology.168.2.3393671](https://doi.org/10.1148/radiology.168.2.3393671)
+8. Baltzer P, Mann RM, Iima M, Sigmund EE, Clauser P, Gilbert FJ, et al. Diffusion-weighted imaging of the breast-a consensus and mission statement from the EUSOBI International Breast Diffusion-Weighted Imaging working group. Eur Radiol. 2020;30(3):1436-50. doi:[10.1007/s00330-019-06510-3](https://doi.org/10.1007/s00330-019-06510-3)
 9. Newitt DC, Malyarenko D, Chenevert TL, Quarles CC, Bell L, Fedorov A, et al. Multisite concordance of apparent diffusion coefficient measurements across the NCI Quantitative Imaging Network. J Med Imaging (Bellingham). 2018;5(1):011003. doi:[10.1117/1.JMI.5.1.011003](https://doi.org/10.1117/1.JMI.5.1.011003)
-10. Veraart J, Sijbers J, Sunaert S, Leemans A, Jeurissen B. Weighted linear least squares estimation of diffusion MRI parameters: strengths, limitations, and pitfalls. Neuroimage. 2013;81:335-46. doi:[10.1016/j.neuroimage.2013.05.028](https://doi.org/10.1016/j.neuroimage.2013.05.028)
-11. Maes F, Collignon A, Vandermeulen D, Marchal G, Suetens P. Multimodality image registration by maximization of mutual information. IEEE Trans Med Imaging. 1997;16(2):187-98. doi:[10.1109/42.563664](https://doi.org/10.1109/42.563664)
-12. Lin LI. A concordance correlation coefficient to evaluate reproducibility. Biometrics. 1989;45(1):255-68. doi:[10.2307/2532051](https://doi.org/10.2307/2532051)
-13. Bland JM, Altman DG. Statistical methods for assessing agreement between two methods of clinical measurement. Lancet. 1986;1(8476):307-10. doi:[10.1016/S0140-6736(86)90837-8](https://doi.org/10.1016/S0140-6736(86)90837-8)
-14. Gudbjartsson H, Patz S. The Rician distribution of noisy MRI data. Magn Reson Med. 1995;34(6):910-4. doi:[10.1002/mrm.1910340618](https://doi.org/10.1002/mrm.1910340618)
+10. Le Bihan D, Breton E, Lallemand D, Aubin ML, Vignaud J, Laval-Jeantet M. Separation of diffusion and perfusion in intravoxel incoherent motion MR imaging. Radiology. 1988;168(2):497-505. doi:[10.1148/radiology.168.2.3393671](https://doi.org/10.1148/radiology.168.2.3393671)
+11. Koh DM, Collins DJ, Orton MR. Intravoxel incoherent motion in body diffusion-weighted MRI: reality and challenges. AJR Am J Roentgenol. 2011;196(6):1351-61. doi:[10.2214/AJR.10.5515](https://doi.org/10.2214/AJR.10.5515)
+12. Padhani AR, Liu G, Koh DM, Chenevert TL, Thoeny HC, Takahara T, et al. Diffusion-weighted magnetic resonance imaging as a cancer biomarker: consensus and recommendations. Neoplasia. 2009;11(2):102-25. doi:[10.1593/neo.81328](https://doi.org/10.1593/neo.81328)
+13. Veraart J, Sijbers J, Sunaert S, Leemans A, Jeurissen B. Weighted linear least squares estimation of diffusion MRI parameters: strengths, limitations, and pitfalls. Neuroimage. 2013;81:335-46. doi:[10.1016/j.neuroimage.2013.05.028](https://doi.org/10.1016/j.neuroimage.2013.05.028)
+14. Maes F, Collignon A, Vandermeulen D, Marchal G, Suetens P. Multimodality image registration by maximization of mutual information. IEEE Trans Med Imaging. 1997;16(2):187-98. doi:[10.1109/42.563664](https://doi.org/10.1109/42.563664)
+15. Koh DM, Collins DJ. Diffusion-weighted MRI in the body: applications and challenges in oncology. AJR Am J Roentgenol. 2007;188(6):1622-35. doi:[10.2214/AJR.06.1403](https://doi.org/10.2214/AJR.06.1403)
+16. Gudbjartsson H, Patz S. The Rician distribution of noisy MRI data. Magn Reson Med. 1995;34(6):910-4. doi:[10.1002/mrm.1910340618](https://doi.org/10.1002/mrm.1910340618)
+17. Jensen JH, Helpern JA, Ramani A, Lu H, Kaczynski K. Diffusional kurtosis imaging: the quantification of non-gaussian water diffusion by means of magnetic resonance imaging. Magn Reson Med. 2005;53(6):1432-40. doi:[10.1002/mrm.20508](https://doi.org/10.1002/mrm.20508)
+18. Rosenkrantz AB, Padhani AR, Chenevert TL, Koh DM, De Keyzer F, Taouli B, et al. Body diffusion kurtosis imaging: basic principles, applications, and considerations for clinical practice. J Magn Reson Imaging. 2015;42(5):1190-202. doi:[10.1002/jmri.24985](https://doi.org/10.1002/jmri.24985)
+19. Lin LI. A concordance correlation coefficient to evaluate reproducibility. Biometrics. 1989;45(1):255-68. doi:[10.2307/2532051](https://doi.org/10.2307/2532051)
+20. Bland JM, Altman DG. Statistical methods for assessing agreement between two methods of clinical measurement. Lancet. 1986;1(8476):307-10. doi:[10.1016/S0140-6736(86)90837-8](https://doi.org/10.1016/S0140-6736(86)90837-8)
+21. Iima M, Le Bihan D. Clinical intravoxel incoherent motion and diffusion MR imaging: past, present, and future. Radiology. 2016;278(1):13-32. doi:[10.1148/radiol.2015150244](https://doi.org/10.1148/radiol.2015150244)
