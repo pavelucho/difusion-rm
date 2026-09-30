@@ -85,9 +85,11 @@ export function convertirManual(fuente: string): ManualConvertido {
         }
         if (!/^https?:/i.test(token.href)) return html;
         // Los enlaces externos se abren aparte para no perder el sitio en el manual.
-        // Si el texto ya es la dirección, la versión impresa no la repite.
+        // Si el texto ya es la dirección, o el DOI al que lleva, la versión impresa
+        // no la repite.
         const sinBarraFinal = (s: string) => s.replace(/\/$/, '');
-        const clase = sinBarraFinal(token.text) === sinBarraFinal(token.href)
+        const esDoi = token.href === `https://doi.org/${token.text}`;
+        const clase = esDoi || sinBarraFinal(token.text) === sinBarraFinal(token.href)
           ? 'class="url-a-la-vista" '
           : '';
         return html.replace('<a ', `<a ${clase}target="_blank" rel="noopener noreferrer" `);

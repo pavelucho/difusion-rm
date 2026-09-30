@@ -42,6 +42,11 @@ describe('convertirManual', () => {
     expect(html).toContain('<a target="_blank" rel="noopener noreferrer" href="https://doi.org/x"');
   });
 
+  it('marca también los enlaces cuyo texto es el DOI al que llevan', () => {
+    const { html } = convertirManual('doi:[10.1148/radiol.11101919](https://doi.org/10.1148/radiol.11101919)');
+    expect(html).toContain('<a class="url-a-la-vista" target="_blank" rel="noopener noreferrer" href="https://doi.org/10.1148/radiol.11101919"');
+  });
+
   it('sustituye las imágenes relativas por un marcador y deja las absolutas', () => {
     const { html, imagenes } = convertirManual(
       '![Pantalla](img/pantalla.svg)\n\n![Logo](https://example.org/logo.png)'
@@ -84,6 +89,21 @@ describe('docs/manual-usuario.md', () => {
   it('cada enlace interno lleva a un título que existe', () => {
     const rotos = manual.enlacesInternos.filter(destino => !manual.ids.includes(destino));
     expect(rotos, `enlaces a anclas inexistentes: ${rotos.join(', ')}`).toEqual([]);
+  });
+
+  it('cita las referencias en orden de aparición y todas llevan DOI', () => {
+    const fuente = readFileSync(new URL('manual-usuario.md', DOCS), 'utf-8');
+    const [texto, lista] = fuente.split('\n## Referencias\n');
+    const primeras: number[] = [];
+    for (const [, cita] of texto.matchAll(/\[\[([\d–,]+)\]\]\(#referencias\)/g)) {
+      for (const parte of cita.split(',')) {
+        const [desde, hasta = desde] = parte.split('–').map(Number);
+        for (let n = desde; n <= hasta; n++) if (!primeras.includes(n)) primeras.push(n);
+      }
+    }
+    const entradas = lista.split('\n').filter(l => /^\d+\. /.test(l));
+    expect(primeras).toEqual(entradas.map((_, i) => i + 1));
+    for (const entrada of entradas) expect(entrada).toMatch(/ doi:\[10\.[^\]]+\]\(https:\/\/doi\.org\/10\./);
   });
 
   it('cada imagen existe junto al manual', () => {

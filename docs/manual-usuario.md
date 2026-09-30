@@ -1,7 +1,7 @@
 # Manual de uso
 
-El **Procesador de difusión** calcula mapas de ADC, de ADC exponencial (eADC) y de
-difusión calculada (cDWI) a partir de la serie de difusión de un estudio de resonancia
+El **Procesador de difusión** calcula mapas de ADC [[1]](#referencias), de ADC exponencial (eADC)
+[[2]](#referencias) y de difusión calculada (cDWI) [[3–5]](#referencias) a partir de la serie de difusión de un estudio de resonancia
 magnética. Funciona en el navegador: las imágenes se leen y se procesan en su propio
 equipo y no se envían a ningún servidor.
 
@@ -200,8 +200,8 @@ razonables: revíselos antes de medir.
 
 ### Valores por defecto
 
-Al abrir el estudio, la aplicación calcula como el equipo y como las guías (PI-RADS v2.1,
-perfil QIBA de difusión): con los valores b del protocolo.
+Al abrir el estudio, la aplicación calcula como el equipo y como las guías (PI-RADS v2.1
+[[6]](#referencias); recomendaciones de QIBA [[7]](#referencias)): con los valores b del protocolo.
 
 - Con **dos valores b**, ADC de dos puntos entre el menor y el mayor.
 - Con **tres o más**, [ajuste multi-b](#ajuste-multi-b) con todos ellos.
@@ -223,7 +223,7 @@ eligen en sus desplegables entre los valores b de la serie, en s/mm².
   imagen se muestra como *b alta adquirida*.
 
 Con una b de 100 s/mm² o menos en el cálculo, el ADC recoge algo de perfusión capilar
-(efecto IVIM), que lo eleva, sobre todo en órganos muy vascularizados como el hígado o el
+(efecto IVIM) [[8]](#referencias), que lo eleva, sobre todo en órganos muy vascularizados como el hígado o el
 riñón; en el cerebro es despreciable. Así lo calculan el equipo y las guías. Cuando la
 serie permite otra elección, una nota gris bajo *b baja* lo recuerda. Para un ADC con menos
 perfusión, uso propio de la investigación, desmarque el multi-b y elija una b baja mayor
@@ -238,9 +238,9 @@ frente a b con **todos** los valores b de la serie, por mínimos cuadrados **sin
 ponderar**. Así el ruido se reparte entre más imágenes y se obtiene el mapa de **bondad de
 ajuste (R²)**.
 
-- Es el ajuste que usan los equipos y el software de referencia de QIBA. Hasta la versión
-  1.2, cada punto se ponderaba con el cuadrado de su señal medida: esa ponderación arrastra
-  el ruido de la medida y, en los estudios de cuerpo de Siemens, daba un ADC un 10 % más
+- Es el ajuste que usan los equipos y el software de referencia de QIBA [[9]](#referencias). Hasta la
+  versión 1.2, cada punto se ponderaba con el cuadrado de su señal medida: esa ponderación
+  arrastra el ruido de la medida [[10]](#referencias) y, en los estudios de cuerpo de Siemens, daba un ADC un 10 % más
   alto que el del equipo.
 - Usa todos los valores b, incluido b = 0 si la serie lo tiene.
 - La b baja elegida sigue siendo la referencia del corregistro: las demás imágenes se
@@ -253,7 +253,7 @@ ajuste (R²)**.
 ### Corregistro
 
 Alinea en cada corte la imagen de b alta (con multi-b, la de cada valor b) con la de b
-baja, para corregir pequeños movimientos entre adquisiciones. Usa información mutua y
+baja, para corregir pequeños movimientos entre adquisiciones. Usa información mutua [[11]](#referencias) y
 busca dentro de ±8 píxeles y, si incluye rotación, de ±3°.
 
 | Modo | Qué corrige |
@@ -299,7 +299,7 @@ la DWI: de 0 a 3000 s/mm², en pasos de 50, con 2000 por defecto. Puede ser mayo
 alta adquirida, que es lo habitual (se extrapola), o menor (se interpola).
 
 Por encima de 2000 s/mm² aparece un aviso: el modelo monoexponencial deja de describir
-bien la señal y el ruido se amplifica. Interprete esas imágenes con cautela.
+bien la señal y el ruido se amplifica [[4]](#referencias). Interprete esas imágenes con cautela.
 
 ### Ajustes de visualización
 
@@ -337,7 +337,7 @@ lo que muestra:
 > [!TIP]
 > Una lesión brillante en la DWI, con ADC bajo y eADC brillante, sugiere restricción
 > verdadera. Si es brillante en la DWI pero su ADC no es bajo y el eADC no la resalta, el
-> brillo viene del T2 (*T2 shine-through*).
+> brillo viene del T2 (*T2 shine-through*) [[2]](#referencias).
 
 ### Moverse por el estudio
 
@@ -503,11 +503,12 @@ vacío con el aviso *El equipo no tiene corte a esta altura*. Cambie de corte.
 
 Con dos o más pares aparecen:
 
-- el **coeficiente de concordancia de Lin** (1 es concordancia perfecta);
+- el **coeficiente de concordancia de Lin** [[12]](#referencias) (1 es concordancia perfecta);
 - el **sesgo medio**: la media de ADC calculado − ADC del equipo;
 - los **límites de concordancia del 95 %**, mostrados como su semiamplitud (± 1,96 DE de
   las diferencias): los límites son el sesgo más y menos ese valor;
-- un **diagrama de dispersión** con la línea de identidad y un **gráfico de Bland-Altman**.
+- un **diagrama de dispersión** con la línea de identidad y un **gráfico de Bland-Altman**
+  [[13]](#referencias).
 
 **Exportar CSV** descarga `validacion_adc.csv` con todos los pares, con los ADC en mm²/s.
 El archivo no identifica al paciente: si reúne varios estudios, anote a cuál corresponde
@@ -519,7 +520,7 @@ tres o más, el mismo ajuste sin ponderar. Si cambia la b baja, la b alta o el m
 vuelva a ellos antes de añadir pares.
 
 Aun así, en los equipos Siemens el ADC del equipo sale algo más bajo que cualquier cálculo
-externo, hasta un 3,5 % en un estudio multicéntrico del NCI (Newitt et al., 2018): el
+externo, hasta un 3,5 % en un estudio multicéntrico del NCI [[9]](#referencias): el
 equipo usa la b efectiva de la secuencia, un poco mayor que la b nominal guardada en el
 DICOM. Téngalo en cuenta al interpretar el sesgo.
 
@@ -618,10 +619,10 @@ Las pestañas **Contraste** y **Validación** exportan sus tablas en CSV (`contr
 - **Modelo monoexponencial.** Es razonable hasta b ≈ 2000 s/mm²; por encima, la señal se
   aparta del modelo y el ruido se amplifica.
 - **Microperfusión (IVIM).** Con b de 100 s/mm² o menos, el ADC incluye algo de perfusión
-  capilar y sale más alto en órganos muy vascularizados. Es la convención del equipo y de
+  capilar y sale más alto en órganos muy vascularizados [[8]](#referencias). Es la convención del equipo y de
   las guías, pero hay que tenerla presente al comparar con estudios que la eviten.
 - **Suelo de ruido.** En zonas de señal muy baja, el ruido de las imágenes de magnitud
-  queda rectificado. La máscara lo mitiga, pero no puede quitar el suelo que ya está en
+  queda rectificado [[14]](#referencias). La máscara lo mitiga, pero no puede quitar el suelo que ya está en
   las imágenes adquiridas.
 - **Corregistro en el plano.** No corrige el movimiento entre cortes ni la distorsión
   geométrica.
@@ -723,3 +724,22 @@ botón **Cómo citar** de la barra inferior da la referencia en APA y la entrada
 listas para copiar, con el DOI que corresponde a esa versión. El DOI de versión fija el
 código exacto que produjo los mapas y es el que debe ir en la sección de métodos; el DOI
 de concepto apunta siempre a la última versión publicada.
+
+## Referencias
+
+En formato Vancouver, numeradas por orden de aparición en el texto.
+
+1. Le Bihan D, Breton E, Lallemand D, Grenier P, Cabanis E, Laval-Jeantet M. MR imaging of intravoxel incoherent motions: application to diffusion and perfusion in neurologic disorders. Radiology. 1986;161(2):401-7. doi:[10.1148/radiology.161.2.3763909](https://doi.org/10.1148/radiology.161.2.3763909)
+2. Provenzale JM, Engelter ST, Petrella JR, Smith JS, MacFall JR. Use of MR exponential diffusion-weighted images to eradicate T2 "shine-through" effect. AJR Am J Roentgenol. 1999;172(2):537-9. doi:[10.2214/ajr.172.2.9930819](https://doi.org/10.2214/ajr.172.2.9930819)
+3. Blackledge MD, Leach MO, Collins DJ, Koh DM. Computed diffusion-weighted MR imaging may improve tumor detection. Radiology. 2011;261(2):573-81. doi:[10.1148/radiol.11101919](https://doi.org/10.1148/radiol.11101919)
+4. Maas MC, Fütterer JJ, Scheenen TW. Quantitative evaluation of computed high b value diffusion-weighted magnetic resonance imaging of the prostate. Invest Radiol. 2013;48(11):779-86. doi:[10.1097/RLI.0b013e31829705bb](https://doi.org/10.1097/RLI.0b013e31829705bb)
+5. Ueno Y, Takahashi S, Kitajima K, Kimura T, Aoki I, Kawakami F, et al. Computed diffusion-weighted imaging using 3-T magnetic resonance imaging for prostate cancer diagnosis. Eur Radiol. 2013;23(12):3509-16. doi:[10.1007/s00330-013-2958-z](https://doi.org/10.1007/s00330-013-2958-z)
+6. Turkbey B, Rosenkrantz AB, Haider MA, Padhani AR, Villeirs G, Macura KJ, et al. Prostate Imaging Reporting and Data System Version 2.1: 2019 update of Prostate Imaging Reporting and Data System Version 2. Eur Urol. 2019;76(3):340-51. doi:[10.1016/j.eururo.2019.02.033](https://doi.org/10.1016/j.eururo.2019.02.033)
+7. Shukla-Dave A, Obuchowski NA, Chenevert TL, Jambawalikar S, Schwartz LH, Malyarenko D, et al. Quantitative imaging biomarkers alliance (QIBA) recommendations for improved precision of DWI and DCE-MRI derived biomarkers in multicenter oncology trials. J Magn Reson Imaging. 2019;49(7):e101-21. doi:[10.1002/jmri.26518](https://doi.org/10.1002/jmri.26518)
+8. Le Bihan D, Breton E, Lallemand D, Aubin ML, Vignaud J, Laval-Jeantet M. Separation of diffusion and perfusion in intravoxel incoherent motion MR imaging. Radiology. 1988;168(2):497-505. doi:[10.1148/radiology.168.2.3393671](https://doi.org/10.1148/radiology.168.2.3393671)
+9. Newitt DC, Malyarenko D, Chenevert TL, Quarles CC, Bell L, Fedorov A, et al. Multisite concordance of apparent diffusion coefficient measurements across the NCI Quantitative Imaging Network. J Med Imaging (Bellingham). 2018;5(1):011003. doi:[10.1117/1.JMI.5.1.011003](https://doi.org/10.1117/1.JMI.5.1.011003)
+10. Veraart J, Sijbers J, Sunaert S, Leemans A, Jeurissen B. Weighted linear least squares estimation of diffusion MRI parameters: strengths, limitations, and pitfalls. Neuroimage. 2013;81:335-46. doi:[10.1016/j.neuroimage.2013.05.028](https://doi.org/10.1016/j.neuroimage.2013.05.028)
+11. Maes F, Collignon A, Vandermeulen D, Marchal G, Suetens P. Multimodality image registration by maximization of mutual information. IEEE Trans Med Imaging. 1997;16(2):187-98. doi:[10.1109/42.563664](https://doi.org/10.1109/42.563664)
+12. Lin LI. A concordance correlation coefficient to evaluate reproducibility. Biometrics. 1989;45(1):255-68. doi:[10.2307/2532051](https://doi.org/10.2307/2532051)
+13. Bland JM, Altman DG. Statistical methods for assessing agreement between two methods of clinical measurement. Lancet. 1986;1(8476):307-10. doi:[10.1016/S0140-6736(86)90837-8](https://doi.org/10.1016/S0140-6736(86)90837-8)
+14. Gudbjartsson H, Patz S. The Rician distribution of noisy MRI data. Magn Reson Med. 1995;34(6):910-4. doi:[10.1002/mrm.1910340618](https://doi.org/10.1002/mrm.1910340618)
