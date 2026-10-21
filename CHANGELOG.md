@@ -2,7 +2,7 @@
 
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
 
-## [Sin publicar]
+## [1.3.1] — 2026-10-21
 
 ### Corregido — memoria
 Al abrir el estudio completo, la aplicación guardaba en memoria todas sus imágenes, de
