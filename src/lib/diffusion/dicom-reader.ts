@@ -66,7 +66,31 @@ function detectVendorADC(
   return /(^|[^a-z])adc([^a-z]|$)/i.test(seriesDescription);
 }
 
+/** Píxeles de un corte del que solo se ha leído la cabecera. */
+const SIN_PIXELES = new Float32Array(0);
+
 export function parseDicom(buffer: ArrayBuffer): DicomSlice {
+  return leer(buffer, true);
+}
+
+/**
+ * Lee solo lo que hace falta para inventariar el estudio, sin quedarse con los
+ * píxeles ni con el archivo. Un estudio completo exportado del PACS puede ocupar
+ * varios gigas y casi todo son series que no se van a calcular: guardarlas en
+ * memoria dejaba sin RAM a equipos que además tienen abiertos el visor y el
+ * dictado. Los píxeles se comprueban igual que en `parseDicom`, para que un
+ * archivo que no se puede decodificar se descarte aquí y no al calcular, y
+ * `origen` permite releerlo cuando haga falta.
+ */
+export function leerCabecera(buffer: ArrayBuffer, origen: number): DicomSlice {
+  const { metadata } = leer(buffer, false);
+  return {
+    metadata: { ...metadata, dataset: undefined, buffer: undefined, origen },
+    pixelData: SIN_PIXELES,
+  };
+}
+
+function leer(buffer: ArrayBuffer, conPixeles: boolean): DicomSlice {
   const byteArray = new Uint8Array(buffer);
   const dataset = dicomParser.parseDicom(byteArray);
   
@@ -150,9 +174,12 @@ export function parseDicom(buffer: ArrayBuffer): DicomSlice {
 
   const pixels = readPixelSamples(dataset);
 
-  const floatPixels = new Float32Array(pixels.length);
-  for (let i = 0; i < pixels.length; i++) {
-    floatPixels[i] = pixels[i] * rescaleSlope + rescaleIntercept;
+  let floatPixels = SIN_PIXELES;
+  if (conPixeles) {
+    floatPixels = new Float32Array(pixels.length);
+    for (let i = 0; i < pixels.length; i++) {
+      floatPixels[i] = pixels[i] * rescaleSlope + rescaleIntercept;
+    }
   }
 
   return {

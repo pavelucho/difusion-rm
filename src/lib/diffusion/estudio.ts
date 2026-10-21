@@ -61,8 +61,29 @@ export function prepararConjunto(
   series: SerieDetectada[],
   elegida: SerieDetectada
 ): ConjuntoPreparado {
-  const { difusion, adcEquipo: cortesAdc, sinValorB } = cortesDelConjunto(todosLosCortes, elegida);
-  const { diffusion } = groupAndAverageSlices(difusion);
+  const cortes = cortesDelConjunto(todosLosCortes, elegida);
+  return prepararAgrupado(
+    cortes,
+    groupAndAverageSlices(cortes.difusion).diffusion,
+    groupAndAverageSlices(cortes.adcEquipo).vendorAdc,
+    series,
+    elegida
+  );
+}
+
+/**
+ * La segunda mitad de `prepararConjunto`, con los cortes ya agrupados. El worker
+ * agrupa mientras lee los píxeles del disco, así que entra por aquí; de `cortes`
+ * solo se usan los metadatos.
+ */
+export function prepararAgrupado(
+  cortes: ReturnType<typeof cortesDelConjunto>,
+  diffusion: Map<string, AveragedSlice>,
+  adcAgrupado: Map<string, AveragedSlice>,
+  series: SerieDetectada[],
+  elegida: SerieDetectada
+): ConjuntoPreparado {
+  const { difusion, adcEquipo: cortesAdc, sinValorB } = cortes;
 
   const bValues = Array.from(
     new Set(Array.from(diffusion.values()).map(g => g.metadata.bValue))
@@ -119,14 +140,13 @@ export function prepararConjunto(
 
   let adcEquipo: AdcEquipoPreparado | undefined;
   if (elegida.adcEquipo && cortesAdc.length > 0) {
-    const { vendorAdc } = groupAndAverageSlices(cortesAdc);
-    const cortes = [...vendorAdc.values()].sort(
+    const cortesEquipo = [...adcAgrupado.values()].sort(
       (a, b) => a.metadata.canonicalPosition - b.metadata.canonicalPosition
     );
     // El equipo guarda el ADC en 10⁻⁶ mm²/s y la aplicación calcula en mm²/s:
     // sin convertirlo, la pestaña de validación comparaba 800 con 0,0008.
-    const unidad = resolverUnidadAdc(cortes);
-    for (const corte of cortes) {
+    const unidad = resolverUnidadAdc(cortesEquipo);
+    for (const corte of cortesEquipo) {
       for (let i = 0; i < corte.pixelData.length; i++) corte.pixelData[i] *= unidad.factor;
     }
     if (unidad.declaradaDescartada) {
@@ -136,7 +156,7 @@ export function prepararConjunto(
           .replaceAll('{usada}', unidad.etiqueta)
       );
     }
-    adcEquipo = { descripcion: elegida.adcEquipo.descripcion, cortes, unidad };
+    adcEquipo = { descripcion: elegida.adcEquipo.descripcion, cortes: cortesEquipo, unidad };
   }
 
   return { diffusion, bValues, bLow, bHigh, multiB, matched, discardedCount, errors, avisos, threshold, adcEquipo };

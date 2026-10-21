@@ -1,22 +1,35 @@
 import JSZip from 'jszip';
-import { parseDicom } from './dicom-reader';
+import { leerCabecera, parseDicom } from './dicom-reader';
 import {
+  crearAgrupador,
+  cortesDelConjunto,
   inventariarSeries,
   serieInicial,
   type MatchedSlice,
   type SerieDetectada,
 } from './series-builder';
-import { calcularMapas, prepararConjunto, type AdcEquipoPreparado } from './estudio';
+import { calcularMapas, prepararAgrupado, type AdcEquipoPreparado } from './estudio';
 import { emparejarAdcEquipo } from './adc-equipo';
 import { nombrePuedeSerDicom } from '../entrada-archivos';
+import { hayDescompresionNativa, leerEntradaZip, leerIndiceZip } from '../zip-lectura';
 import { createDerivedDicom, exportZip } from './dicom-writer';
 import type { DicomSlice, AveragedSlice } from './types';
 import { DicomNoSoportadoError } from './pixel-data';
 import { es } from '../../i18n/es';
 
+/**
+ * De dónde se leen los archivos del estudio, por su posición. Se conserva para
+ * releer la serie elegida: los archivos siguen en el disco y no en la memoria.
+ */
+interface Origen {
+  total: number;
+  leer: (indice: number) => Promise<ArrayBuffer>;
+}
+
 // We store state in the worker to handle recomputations and exports
 let state: {
-  /** Todos los cortes legibles del estudio, para poder cambiar de serie sin releer. */
+  origen: Origen;
+  /** Cabeceras de todo el estudio, sin píxeles, para poder cambiar de serie. */
   todosLosCortes: DicomSlice[];
   series: SerieDetectada[];
   serieElegida: string[];
@@ -34,26 +47,126 @@ let state: {
   useMultiB: boolean;
 } | null = null;
 
+async function abrirOrigen(type: string, payload: any): Promise<Origen> {
+  // Dos formas de llegar al mismo sitio: un ZIP que hay que descomprimir, o los
+  // archivos del estudio tal cual, que es como los tiene quien copia una carpeta
+  // del PACS o mete el CD.
+  if (type === 'LOAD_FILES') {
+    const archivos: File[] = payload.files;
+    return { total: archivos.length, leer: (i) => archivos[i].arrayBuffer() };
+  }
+
+  const zip: File = payload.file;
+  // Un export de PACS trae dentro el visor de escritorio y sus instaladores:
+  // descomprimir cientos de megas para descubrir que no son imágenes es
+  // tiempo y memoria tirados.
+  if (hayDescompresionNativa()) {
+    try {
+      const entradas = (await leerIndiceZip(zip)).filter(e => nombrePuedeSerDicom(e.nombre));
+      return { total: entradas.length, leer: (i) => leerEntradaZip(zip, entradas[i]) };
+    } catch {
+      // Un ZIP que el lector propio no entiende se abre con JSZip, como antes.
+    }
+  }
+  // JSZip mantiene el ZIP entero en memoria: es el último recurso.
+  const unzipped = await new JSZip().loadAsync(zip);
+  const entradas = Object.values(unzipped.files).filter(f => !f.dir && nombrePuedeSerDicom(f.name));
+  return { total: entradas.length, leer: (i) => entradas[i].async('arraybuffer') };
+}
+
+/**
+ * Lee las cabeceras de todo el estudio. Los píxeles se comprueban pero no se
+ * guardan: solo hacen falta los de la serie que se va a calcular.
+ */
+async function leerCabeceras(origen: Origen): Promise<{ cortes: DicomSlice[]; erroresLectura: string[] }> {
+  const cortes: DicomSlice[] = [];
+  // Un archivo que no es DICOM se ignora sin más; uno que sí lo es pero no se
+  // puede decodificar tiene que llegar al usuario, agrupado por motivo, en
+  // lugar de desaparecer y dejar una serie incompleta sin explicación.
+  const ilegibles = new Map<string, number>();
+
+  for (let indice = 0; indice < origen.total; indice++) {
+    try {
+      cortes.push(leerCabecera(await origen.leer(indice), indice));
+    } catch (err) {
+      if (err instanceof DicomNoSoportadoError) {
+        ilegibles.set(err.message, (ilegibles.get(err.message) ?? 0) + 1);
+      }
+      // Cualquier otro error se trata como archivo que no es DICOM.
+    }
+    const leidos = indice + 1;
+    if (leidos % 10 === 0 || leidos === origen.total) {
+      self.postMessage({ type: 'PROGRESS', payload: { step: es.pasoLectura, progress: leidos / origen.total } });
+    }
+  }
+
+  const erroresLectura = [...ilegibles.entries()].map(([motivo, n]) =>
+    es.errArchivosIlegibles.replace('{n}', String(n)).replace('{motivo}', motivo)
+  );
+  return { cortes, erroresLectura };
+}
+
+/**
+ * Lee del origen los píxeles de unos cortes y los va promediando por posición y
+ * valor b, sin tener nunca la serie entera en memoria. El primer corte de cada
+ * grupo conserva su archivo: es el que se clona al exportar los mapas.
+ */
+async function leerAgrupando(origen: Origen, cortes: DicomSlice[], avance: { hechos: number; total: number }) {
+  const agrupador = crearAgrupador();
+  for (const cabecera of cortes) {
+    let buffer: ArrayBuffer;
+    let pixelData: Float32Array;
+    try {
+      buffer = await origen.leer(cabecera.metadata.origen!);
+      pixelData = parseDicom(buffer).pixelData;
+    } catch {
+      // Ya se leyó una vez: si ahora falla, el archivo ya no está o ha cambiado.
+      throw new Error(es.errReleer);
+    }
+    agrupador.agregar({ metadata: { ...cabecera.metadata, buffer }, pixelData });
+    avance.hechos++;
+    if (avance.hechos % 10 === 0 || avance.hechos === avance.total) {
+      self.postMessage({ type: 'PROGRESS', payload: { step: es.pasoLecturaSerie, progress: avance.hechos / avance.total } });
+    }
+  }
+  return agrupador.terminar();
+}
+
 /**
  * Deja el estudio listo para calcular a partir de una serie concreta, y avisa a la
- * interfaz. Se usa al cargar y cada vez que se cambia de serie, sin releer nada:
- * los cortes ya están en memoria.
+ * interfaz. Se usa al cargar y cada vez que se cambia de serie: las cabeceras ya
+ * están en memoria, y de la serie elegida se leen los píxeles.
  */
-function prepararSerie(
+async function prepararSerie(
+  origen: Origen,
   todosLosCortes: DicomSlice[],
   series: SerieDetectada[],
   elegida: SerieDetectada,
   erroresLectura: string[]
-): void {
+): Promise<void> {
   // El desplegable no deja elegir lo que no es difusión, pero el cálculo no debe
   // depender de eso: una T1 o un eADC no son una serie de difusión.
   if (!elegida.esDifusion) throw new Error(es.errSerieNoDifusion);
 
+  // La serie anterior se suelta antes de leer la nueva, para no tener las dos.
+  state = null;
+
+  const cortes = cortesDelConjunto(todosLosCortes, elegida);
+  const avance = {
+    hechos: 0,
+    total: cortes.difusion.length + (elegida.adcEquipo ? cortes.adcEquipo.length : 0),
+  };
+  const { diffusion: grupos } = await leerAgrupando(origen, cortes.difusion, avance);
+  const { vendorAdc } = elegida.adcEquipo
+    ? await leerAgrupando(origen, cortes.adcEquipo, avance)
+    : { vendorAdc: new Map<string, AveragedSlice>() };
+
   const {
     diffusion, bValues, bLow, bHigh, multiB, matched, discardedCount, errors, avisos, threshold, adcEquipo,
-  } = prepararConjunto(todosLosCortes, series, elegida);
+  } = prepararAgrupado(cortes, grupos, vendorAdc, series, elegida);
 
   state = {
+    origen,
     todosLosCortes,
     series,
     serieElegida: elegida.seriesUIDs,
@@ -103,83 +216,46 @@ function prepararSerie(
   });
 }
 
-self.onmessage = async (e: MessageEvent) => {
+// Los mensajes se atienden de uno en uno: leer una serie es asíncrono, y un
+// cálculo que llegara a mitad de la lectura trabajaría con el estado a medias.
+let cola: Promise<void> = Promise.resolve();
+self.onmessage = (e: MessageEvent) => {
+  cola = cola.then(() => atender(e));
+};
+
+async function atender(e: MessageEvent): Promise<void> {
   const { type, payload } = e.data;
 
   try {
     if (type === 'LOAD_ZIP' || type === 'LOAD_FILES') {
-      // Dos formas de llegar al mismo sitio: un ZIP que hay que descomprimir, o los
-      // archivos del estudio tal cual, que es como los tiene quien copia una carpeta
-      // del PACS o mete el CD. En ambos casos se acaba con una lista de búferes.
-      let leerArchivo: (indice: number) => Promise<ArrayBuffer>;
-      let totalFiles: number;
+      // El estudio anterior se suelta antes de leer el nuevo.
+      state = null;
+      const origen = await abrirOrigen(type, payload);
+      const { cortes, erroresLectura } = await leerCabeceras(origen);
 
-      if (type === 'LOAD_ZIP') {
-        const zip = new JSZip();
-        const unzipped = await zip.loadAsync(payload.file);
-        // Un export de PACS trae dentro el visor de escritorio y sus instaladores:
-        // descomprimir cientos de megas para descubrir que no son imágenes es
-        // tiempo y memoria tirados.
-        const entradas = Object.values(unzipped.files)
-          .filter(f => !f.dir && nombrePuedeSerDicom(f.name));
-        totalFiles = entradas.length;
-        leerArchivo = (i) => entradas[i].async('arraybuffer');
-      } else {
-        const archivos: File[] = payload.files;
-        totalFiles = archivos.length;
-        leerArchivo = (i) => archivos[i].arrayBuffer();
-      }
-
-      const slices: DicomSlice[] = [];
-      let processedCount = 0;
-      // Un archivo que no es DICOM se ignora sin más; uno que sí lo es pero no se
-      // puede decodificar tiene que llegar al usuario, agrupado por motivo, en
-      // lugar de desaparecer y dejar una serie incompleta sin explicación.
-      const ilegibles = new Map<string, number>();
-
-      for (let indice = 0; indice < totalFiles; indice++) {
-        try {
-          const buffer = await leerArchivo(indice);
-          const slice = parseDicom(buffer);
-          slices.push(slice);
-        } catch (err) {
-          if (err instanceof DicomNoSoportadoError) {
-            ilegibles.set(err.message, (ilegibles.get(err.message) ?? 0) + 1);
-          }
-          // Cualquier otro error se trata como archivo que no es DICOM.
-        }
-        processedCount++;
-        if (processedCount % 10 === 0 || processedCount === totalFiles) {
-          self.postMessage({ type: 'PROGRESS', payload: { step: es.pasoLectura, progress: processedCount / totalFiles } });
-        }
-      }
-
-      const erroresLectura = [...ilegibles.entries()].map(([motivo, n]) =>
-        es.errArchivosIlegibles.replace('{n}', String(n)).replace('{motivo}', motivo)
-      );
-
-      if (slices.length === 0) {
+      if (cortes.length === 0) {
         throw new Error(erroresLectura[0] ?? es.errSinImagenes);
       }
 
-      self.postMessage({ type: 'PROGRESS', payload: { step: es.pasoAgrupacion, progress: 1.0 } });
+      self.postMessage({ type: 'PROGRESS', payload: { step: es.pasoAgrupacion, progress: 0 } });
 
       // Un estudio exportado del PACS trae todas las secuencias del examen y una
       // sola de difusión. Hay que quedarse con esa antes de agrupar nada.
-      const series = inventariarSeries(slices);
+      const series = inventariarSeries(cortes);
       const elegida = serieInicial(series);
 
       if (!elegida) {
         throw new Error(es.errSinDifusion);
       }
 
-      prepararSerie(slices, series, elegida, erroresLectura);
+      await prepararSerie(origen, cortes, series, elegida, erroresLectura);
 
     } else if (type === 'SELECT_SERIES') {
       if (!state) return;
       const elegida = state.series.find(s => s.seriesUIDs.join('|') === payload.id);
       if (!elegida) return;
-      prepararSerie(state.todosLosCortes, state.series, elegida, []);
+      const { origen, todosLosCortes, series } = state;
+      await prepararSerie(origen, todosLosCortes, series, elegida, []);
 
     } else if (type === 'COMPUTE') {
       if (!state) return;
@@ -319,4 +395,4 @@ self.onmessage = async (e: MessageEvent) => {
   } catch (error: any) {
     self.postMessage({ type: 'ERROR', payload: error.message });
   }
-};
+}

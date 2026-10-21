@@ -440,10 +440,26 @@ export interface GroupedSlices {
  * equipo quedaba permanentemente vacía.
  */
 export function groupAndAverageSlices(slices: DicomSlice[]): GroupedSlices {
+  const agrupador = crearAgrupador();
+  for (const slice of slices) agrupador.agregar(slice);
+  return agrupador.terminar();
+}
+
+export interface Agrupador {
+  agregar(slice: DicomSlice): void;
+  terminar(): GroupedSlices;
+}
+
+/**
+ * Lo mismo que `groupAndAverageSlices`, pero recibiendo los cortes de uno en uno.
+ * Así se pueden leer del disco y sumar sin tener toda la serie en memoria: un
+ * tensor de 30 direcciones son 30 imágenes por corte que acaban en una sola.
+ */
+export function crearAgrupador(): Agrupador {
   const diffusion = new Map<string, AveragedSlice>();
   const vendorAdc = new Map<string, AveragedSlice>();
 
-  for (const slice of slices) {
+  const agregar = (slice: DicomSlice) => {
     const posicion = slice.metadata.canonicalPosition.toFixed(2);
     // El valor b de un mapa de ADC no significa nada; lo que lo identifica es su
     // serie, para no promediar dos mapas distintos del mismo estudio.
@@ -456,7 +472,7 @@ export function groupAndAverageSlices(slices: DicomSlice[]): GroupedSlices {
     if (existing) {
       // Dos imágenes de la misma posición y valor b pero de distinta matriz no son
       // repeticiones: promediarlas mezclaría secuencias. Se deja la primera.
-      if (existing.pixelData.length !== slice.pixelData.length) continue;
+      if (existing.pixelData.length !== slice.pixelData.length) return;
       for (let i = 0; i < existing.pixelData.length; i++) {
         existing.pixelData[i] += slice.pixelData[i];
       }
@@ -468,17 +484,20 @@ export function groupAndAverageSlices(slices: DicomSlice[]): GroupedSlices {
         count: 1
       });
     }
-  }
+  };
 
-  for (const grupo of [...diffusion.values(), ...vendorAdc.values()]) {
-    if (grupo.count > 1) {
-      for (let i = 0; i < grupo.pixelData.length; i++) {
-        grupo.pixelData[i] /= grupo.count;
+  const terminar = (): GroupedSlices => {
+    for (const grupo of [...diffusion.values(), ...vendorAdc.values()]) {
+      if (grupo.count > 1) {
+        for (let i = 0; i < grupo.pixelData.length; i++) {
+          grupo.pixelData[i] /= grupo.count;
+        }
       }
     }
-  }
+    return { diffusion, vendorAdc };
+  };
 
-  return { diffusion, vendorAdc };
+  return { agregar, terminar };
 }
 
 export interface MatchedSlice {

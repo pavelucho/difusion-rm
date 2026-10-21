@@ -82,6 +82,8 @@ export const es = {
   errSinImagenes: "El ZIP no contiene imágenes DICOM legibles.",
   pasoLectura: "Lectura DICOM",
   pasoAgrupacion: "Agrupación",
+  pasoLecturaSerie: "Lectura de la serie de difusión",
+  errReleer: "No se pudieron volver a leer los archivos del estudio: puede que el disco, el CD o la memoria USB ya no estén conectados, o que los archivos hayan cambiado. Vuelva a cargar el estudio.",
   pasoCalculo: "Cálculo",
   pasoGenerandoDicom: "Generando DICOM",
   pasoComprimiendo: "Comprimiendo ZIP",

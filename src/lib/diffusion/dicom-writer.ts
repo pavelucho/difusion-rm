@@ -22,6 +22,7 @@ export async function createDerivedDicom(
   // Use dcmjs to clone and write
   // We need to pass the original ArrayBuffer to dcmjs.data.DicomMessage.readFile
   // Since we parsed with dicom-parser before, we parse again with dcmjs here.
+  if (!originalSlice.metadata.buffer) throw new Error('Falta el DICOM original del corte de referencia.');
   const dicomDict = dcmjs.data.DicomMessage.readFile(originalSlice.metadata.buffer, { ignoreErrors: true });
   const dataset = dicomDict.dict;
 

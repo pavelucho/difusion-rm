@@ -2,6 +2,31 @@
 
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/).
 
+## [Sin publicar]
+
+### Corregido — memoria
+Al abrir el estudio completo, la aplicación guardaba en memoria todas sus imágenes, de
+todas las series y dos veces: el archivo original y sus píxeles convertidos. Un estudio
+ocupaba más de tres veces su tamaño en disco, y uno de 1–2 GB necesitaba de 4 a 7 GB. En
+un equipo de 16 GB con el visor y el dictado abiertos, eso bastaba para agotar la RAM, y
+con ella el resto de programas empezaba a fallar. Ahora:
+
+- **Del estudio solo se guardan las cabeceras.** Las imágenes se revisan al abrir, para
+  inventariar las series y avisar de las que no se pueden leer, pero sus píxeles se
+  sueltan. Solo se leen los de la serie de difusión elegida, y sus repeticiones y
+  direcciones se promedian a medida que se leen. Al cambiar de serie se vuelven a leer
+  del disco, y se suelta la anterior.
+- **El ZIP se lee del disco, imagen por imagen**, en lugar de cargarse entero en memoria.
+  Si el navegador no puede descomprimir así, o el ZIP tiene un formato que no se
+  reconoce, se abre como antes.
+- **Al exportar solo se envían los mapas** al proceso de cálculo, y no también las
+  imágenes corregistradas.
+
+Con un estudio sintético de 1481 imágenes (353 MB), la memoria del cálculo pasó de
+1200 MB a 150 MB, la carga tardó la mitad, y los mapas son idénticos bit a bit. Si al
+cambiar de serie los archivos ya no están (se retiró el CD o la memoria USB), un aviso
+pide volver a cargar el estudio.
+
 ## [1.3.0] — 2026-09-29
 
 ### Corregido — comparación con el ADC del equipo

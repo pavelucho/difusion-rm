@@ -1158,9 +1158,15 @@ export default function App() {
                   className="bg-[#3a3028] hover:bg-[#4a3f35] text-gray-200 text-xs py-2 px-3 rounded flex items-center justify-center gap-2"
                   onClick={() => {
                     setAppState('EXPORTING');
+                    // Solo los mapas que se escriben: mandar también las imágenes
+                    // corregistradas duplicaba en el worker todo lo calculado.
                     workerRef.current?.postMessage({
                       type: 'EXPORT_DICOM',
-                      payload: { mapsData: results }
+                      payload: {
+                        mapsData: results.map(r => ({
+                          maps: { adc: r.maps.adc, eadc: r.maps.eadc, cdwi: r.maps.cdwi, mask: r.maps.mask },
+                        })),
+                      },
                     });
                   }}
                   disabled={appState !== 'READY'}

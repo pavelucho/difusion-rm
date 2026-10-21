@@ -47,8 +47,16 @@ export interface DicomMetadata {
   rescaleType?: string;
   windowCenter?: number;
   windowWidth?: number;
-  dataset: any; // dicom-parser dataset
-  buffer: ArrayBuffer; // original buffer to pass to WebWorker or for extraction
+  /** Dataset de dicom-parser; no se guarda en los cortes leídos solo por la cabecera. */
+  dataset?: any;
+  /**
+   * Archivo original, del que se clonan los mapas exportados. Solo lo conservan
+   * los cortes que lo necesitan: guardarlo de todo el estudio era lo que agotaba
+   * la memoria.
+   */
+  buffer?: ArrayBuffer;
+  /** Posición del archivo en el ZIP o en la lista de archivos, para releerlo. */
+  origen?: number;
 }
 
 export interface DicomSlice {

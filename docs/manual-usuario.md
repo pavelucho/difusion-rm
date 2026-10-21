@@ -31,9 +31,11 @@ el botón **Manual de uso**, y desde su página se puede imprimir o guardar en P
   Safari. Funciona también con trackpad. No está pensada para celulares ni tabletas: las
   ROI y la ventana se manejan con el mouse.
 - **El estudio en DICOM**, con la secuencia de difusión: al menos dos valores b.
-- **Memoria suficiente.** Todo lo que se abre se carga en la memoria del navegador. Si el
-  estudio es muy grande y el equipo se ralentiza, abra solo la carpeta de la serie de
-  difusión.
+- **Poca memoria.** Puede abrir el estudio completo: la aplicación revisa todas las
+  imágenes, pero solo guarda en memoria la serie de difusión que calcula. Funciona en
+  equipos de 8 GB de RAM, aunque tengan abiertos a la vez el visor y el dictado.
+- **El estudio disponible mientras trabaja.** Al cambiar de serie en el desplegable, la
+  aplicación vuelve a leer los archivos: no retire el CD ni la memoria USB hasta terminar.
 
 No hay que instalar nada ni crear ninguna cuenta.
 
@@ -663,7 +665,8 @@ que detienen el cálculo.
 | Aviso de saturación al exportar | Algunos valores no caben en 16 bits | Revise la máscara y la b objetivo antes de exportar |
 | No aparece la pestaña *Validación* | El estudio no trae el ADC del equipo, no se reconoce como tal, o no tiene la geometría de la serie en uso | Incluya la serie ADC del equipo al exportar el estudio; en el desplegable, elija la serie *con ADC del equipo* |
 | El panel *ADC del equipo* dice *El equipo no tiene corte a esta altura* | El mapa del equipo no cubre este corte | Cambie de corte |
-| La aplicación va lenta o el navegador se cierra al cargar | El estudio es muy grande: todo se carga en memoria | Abra solo la carpeta de la serie de difusión |
+| *No se pudieron volver a leer los archivos del estudio* | Al cambiar de serie, los archivos ya no estaban: se retiró el CD o la memoria USB, o se movieron o borraron | Vuelva a conectar el disco y cargue el estudio de nuevo |
+| La aplicación va lenta o el navegador se cierra al cargar | El equipo se quedó sin memoria, casi siempre por otros programas o muchas pestañas abiertas | Cierre las pestañas y programas que no use; si persiste, abra solo la carpeta de la serie de difusión |
 | No aparece la última versión | Las versiones nuevas se activan al recargar | Recargue la página, o cierre y vuelva a abrir la aplicación |
 
 ## Glosario
